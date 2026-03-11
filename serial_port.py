@@ -3,7 +3,7 @@ from time import sleep;
 from serial import Serial;
 from serial.tools import list_ports;
 
-def find_port() -> (int, str):
+def find_port() -> str:
     ports: list;
     port: str = None;
     
@@ -15,8 +15,8 @@ def find_port() -> (int, str):
             break;
     if port is None:
         stderr.write("USB port not found\n");
-        return (-1, port);
-    return (0, port);
+        return (port);
+    return (port);
 
 def init_serial(serial: Serial):
 	serial.dtr: bool = False

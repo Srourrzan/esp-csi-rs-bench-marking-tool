@@ -4,7 +4,9 @@ from time import time_ns;
 from sys import exit, stderr;
 from serial_port import find_port;
 from json import load, JSONDecodeError;
+from inspect import currentframe, getframeinfo
 
+from config import Config;
 
 def load_config() -> (int, Dict|None):
 	try:
@@ -46,22 +48,31 @@ def now_epoch_us() -> int:
 	"""
 	return (time_ns() // 1000);
 
-def validate_sys() -> (int, str|None, Dict|None):
-	"""
-	Docstring for validate_sys
-	
-	:return: Description
-	:rtype: Any
-	"""
-	usb_port: str
-	configs: Dict
+def validate_sys() -> (int, Config):
+        """
+        Docstring for validate_sys
 
-	if not check_ntp_sync():
-		return (-1, None, None);
-	status, usb_port = find_port()
-	if (status < 0):
-		return (-1, None, None);
-	status, configs = load_config()
-	if (status < 0):
-		return (-1, None, None);
-	return (0, usb_port, configs);
+        :return: Description
+        :rtype: Any
+        """
+        status = int
+        json_configs: Dict
+
+        try:
+                conf: Config = config()
+                # if not check_ntp_sync():
+                #         return (-1, None, None);
+                conf.usb_port = None
+                status, json_configs = load_config()
+                if (status < 0):
+                        return (-1, None);
+                if conf.validate_configs(json_configs) < -1:
+                        return (-1, None);
+        except ValueError as e:
+                print(f"{e}", file=stderr)
+                return (-1, None);
+        except Exception as e:
+                print(f"Unexpected error: {e} in {__file__}", file=stderr)
+                return (-1, None);
+        return (0, conf);
+

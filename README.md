@@ -1,3 +1,9 @@
+
+espressif csi repo `https://github.com/espressif/esp-csi`
+espressif modified code for resource measurements repo `https://github.com/Srourrzan/espressif_csi_firmware/tree/master`
+
+
+
 Naive latency (delta_us) is the raw, uncorrected difference between:
 
 * The host’s timestamp when it receives the CSI data (host_rx_epoch_us).

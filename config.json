@@ -1,5 +1,6 @@
 {
 	"baud_rate": 921600,
 	"output_csv_file": "csi_latency_data.csv",
-	"ntp_server": "pool.ntp.org"
+	"task": "resources",
+	"valid_tasks": ["latency", "resources", "throughput"]
 }
