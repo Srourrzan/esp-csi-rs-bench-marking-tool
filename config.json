@@ -1,6 +1,14 @@
 {
 	"baud_rate": 921600,
-	"output_csv_file": "csi_latency_data.csv",
+	"timeout": 10,
 	"task": "resources",
-	"valid_tasks": ["latency", "resources", "throughput"]
+	"valid_tasks": ["latency", "resources", "throughput"],
+
+	"log_dir": "logs",
+	"log_level": "INFO",
+	"csv_dir": "data_logs",
+	"csv_file_prefix": "csi_latency_data_",
+	"output_csv_file": "csi_latency_data.csv",
+	"stats_file_prefix": "csi_latency_stats_",
+	"max_lines": 500
 }
