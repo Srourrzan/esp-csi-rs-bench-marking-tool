@@ -10,5 +10,14 @@
 	"csv_file_prefix": "csi_latency_data_",
 	"output_csv_file": "csi_latency_data.csv",
 	"stats_file_prefix": "csi_latency_stats_",
-	"max_lines": 500
+	"max_lines": 500,
+
+	"firmware_types":
+	{
+		"CSI_DATA":
+		{
+			"name": "espressif",
+			"timestamp_label": "local_timestamp"
+		}
+	}
 }

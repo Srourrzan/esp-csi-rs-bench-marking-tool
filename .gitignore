@@ -1,5 +1,10 @@
+#emacs files
 *.*~
+.editorconfig
+
+#python cache files
 __pycache__/
+
+#program output files
 logs/
 data_logs/
-.editorconfig

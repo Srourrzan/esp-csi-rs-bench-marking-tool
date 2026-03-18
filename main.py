@@ -1,4 +1,4 @@
-from csv import reader
+#from csv import reader
 from typing import List
 from sys import exit, stderr
 from statistics import median, quantiles;
@@ -7,7 +7,7 @@ from logging import error, info, debug;
 
 from config import Config;
 from debug import __FILE__, __LINE__;
-from serial_port import init_serial, getline;
+from serial_port import init_serial, getline, SerialTimeoutError, EmptyLineError, find_header;
 from utils import validate_sys;
 from stats import Stats;
 
@@ -27,36 +27,21 @@ def main() -> int:
     try:
         statis = Stats()
         statis.setup_csv_files(conf)
-    except Exception as e:
-        error(f"{__FILE__()}:{__LINE__()} unexpected error while setting up csv files: {e}")
-        exit(1);
-    try:
         with Serial(conf.usb_port, conf.baud_rate, timeout=conf.timeout) as ser:
             info(f"Serial port {conf.usb_port} opened at {conf.baud_rate} baud.")
             init_serial(ser)
             while (True):
-                response, line_count = getline(ser, conf, line_count)
-                if response:
-                    print(f"response {response}")
-                if line_count == 100:
-                    break;
-                # response: bytes = ser.readline() #from here
-                # if not response:
-                #     debug("No response from serial port.")
-                #     if line_count > MAX_LINES_BEFORE_HEADER_TIMEOUT and not header_parsed:
-                #         error("Timeout waiting for header. Is the ESP connected and sending data?")
-                #         break
-                #     continue
-                # line_count += 1
-                # try:
-                #     line: str = response.decode("utf-8", errors="replace")
-                # except Exception as e:
-                #     error(f"Failed to decode response: {e} - raw: {response!r}")
-                #     continue
-                # line: str = line.strip()
-                # if not line:
-                #     debug("Received empty line.")
-                #     continue # to here all in one function called getline
+                try:
+                    line, line_count = getline(ser, conf, line_count, header_parsed)
+                    if not line:
+                        continue;
+                    if line_count == 100:
+                        break
+                except EmptyLineError as e:
+                    debug(str(e))
+                    continue;
+                #header_parsed, col_index =
+                header: List = find_header(line);
                 # if line.startswith("type,"):
                 #     header: List = next(reader([line]))
                 #     col_index = {name: i for i, name in enumerate(header)}
@@ -95,12 +80,17 @@ def main() -> int:
                 #     if line_count > MAX_LINES_BEFORE_HEADER_TIMEOUT and not header_parsed and line.startswith(data_indc):
                 #         logging.error("Received CSI data but header was not parsed within timeout. Possible issue with ESP data format or header transmission.")
                 #         break
+    except SerialTimeoutError as e: #move down
+        error(str(e))
+        status = 3;
     except SerialException as e:
         print(f"{e}", file=stderr);
     except PermissionError:
         print("Permission denied - check user permissions", file=stderr);
+        status = 1;
     except UnicodeDecodeError as e:
         print(f"error while decoding: {e}", file=stderr);
+        status = 2;
     except KeyboardInterrupt:
         print("\nStopped by user.")
         exit(127);
@@ -117,7 +107,7 @@ def main() -> int:
             info("No CSI data collected")
         info(f"Runtime log saved to: logs/runtime_{conf.run_ts}.log")
         statis.close();
-    return (0);
+    return (status);
 
 if __name__ == "__main__":
     status = main();
