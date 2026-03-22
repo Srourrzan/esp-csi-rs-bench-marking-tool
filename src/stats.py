@@ -24,8 +24,13 @@ class Stats(BaseModel):
     def deltas(self):
         return (self.__deltas);
 
-    def __init(self, deltaname: str, statsname: str):
+    # @deltas.setter
+    # def deltas(self, value: list[int]) -> None:
+    #     self.__deltas = value
+
+    def __init__(self, deltaname: str, statsname: str):
         try:
+            super().__init__()
             self.__deltas = []
             self.__delta = FileSetup()
             self.__delta.init_file(deltaname)
@@ -48,7 +53,7 @@ class Stats(BaseModel):
     def setup_csv_files(self, conf: Config):
         """Sets up CSV writers for raw deltas and final statistics."""
         try:
-            self.__init(conf.csv_filename, conf.stats_filename)
+            # self.__init(conf.csv_filename, conf.stats_filename)
             self.__delta.write_row([
                 'host_rx_epoch_us',
                 'esp_epoch_us',

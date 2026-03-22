@@ -1,3 +1,4 @@
+from sys import stderr;
 from pathlib import Path
 from os.path import join
 from datetime import datetime
@@ -92,14 +93,14 @@ class Config(BaseModel):
 
     
     def __validate_firmwares(self, json_configs: Dict):
-        self.__firmware_types = {}
+        self.__firmwares= {}
         if "firmware_types" not in json_configs:
             raise ValueError (
                 f"{__FILE__()}:{__LINE__()}: firmware types are not set"
             )
         for indicator, properties in json_configs["firmware_types"].items():
             firmware = Firmware.from_dict(properties)
-            self.__firmware_types[indicator] = firmware
+            self.__firmwares[indicator] = firmware
 
             
     def __serial_port_conf(self, json_configs: Dict):

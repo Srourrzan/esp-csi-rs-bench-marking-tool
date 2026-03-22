@@ -25,14 +25,6 @@ def check_ntp_sync() -> bool:
                 print(f"{__FILE__()}:{__LINE__()}: Warning: couldn't verify NTP state: {e}", file=stderr)
                 return (False);
 
-# There is a line in cpu_start that contains the project name, it might
-# be useful for detecting firmware type
-def detect_firmware_type(line_content: str) -> (str|None):
-    """Detects firmware type based on the first line."""
-    if line_content.startswith("type,id,mac,rssi,rate,sig_mode,mcs,bandwidth,smoothing,not_sounding,aggregation,stbc,fec_coding,sgi,noise_floor,ampdu_cnt,channel,secondary_channel,local_timestamp,esp_epoch_us,ant,sig_len,rx_state,len,first_word,data"):
-        return "CSI_DATA"
-    return None
-
 
 def now_epoch_us() -> int:
         """
