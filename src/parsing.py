@@ -26,7 +26,11 @@ class Data:
     
     def getline(self, ser: Serial, conf: Config) -> (str|None):
         """get the serial line """
+        print(f"getting a serial line")
         response: bytes = ser.readline()
+        print(f"response: {response}")
+        # if response is None:
+        #     print(f"response is empty")
         if not response:
             debug(f"{__FILE__()}:{__LINE__()} No response from serial port.")
             if self.line_count > conf.max_lines and not self.header_parsed:

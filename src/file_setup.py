@@ -32,6 +32,7 @@ class FileSetup:
         """Write a header to the associated CSV file"""
         try:
             self.__writer.writerow(row)
+            self.__io.flush()
         except Exception as e:
             raise RuntimeError(
                 f"{__FILE__()}:{__LINE__()} Encountered an error from {e}"

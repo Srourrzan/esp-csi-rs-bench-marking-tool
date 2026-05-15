@@ -63,3 +63,25 @@ To check for drift or sudden jumps.
 2. 
 Compare Across Firmwares
 Run your script with different ESP32 firmwares and compare the latency distributions.
+
+
+## HEAP and CPU Usage:
+
+ I should fix the below summarization to be more accurate and actionable:
+
+* CPU% (Wi‑Fi task):
+This is the percent of total CPU time the Wi‑Fi driver task got during the last ~1 s window (your code uses uxTaskGetSystemState before/after a 1 s delay). CSI packets arrive in bursts and your callback prints a lot, so the Wi‑Fi task’s CPU usage spikes and dips. That’s normal. To compare firmwares, don’t use a single instant—sample for 30–60 s and report mean/median and a high percentile (e.g., p95). ESP‑IDF’s run‑time stats use an ESP‑TIMER counter (1 MHz), so the percentage is time‑based and stable across CPU freq changes. On dual‑core chips, the printed percent is relative to total time across all cores (so a task using one core fully can read ~50%). (docs.espressif.com docs.espressif.com)
+* Heap free / largest block:
+heap_caps_get_free_size and heap_caps_get_largest_free_block are live snapshots. They’ll bounce as the Wi‑Fi driver allocates buffers on the fly. That’s expected. They’re still useful for spotting fragmentation or runaway growth over long runs. (docs.espressif.com)
+* Min free since boot:
+heap_caps_get_minimum_free_size is the lowest value seen since power‑on. It’s the most comparable number across builds—if it’s stable after a long test, you haven’t leaked RAM. (docs.espressif.com)
+* Stack headroom (uxTaskGetStackHighWaterMark):
+Returns bytes on ESP‑IDF (not words). It’s the smallest amount of free stack that task ever had. After your workload has “peaked,” this stabilizes and is a good safety indicator. (docs.espressif.com)
+
+How to get “accurate” (comparable) numbers
+
+* CPU: Collect many 1‑s samples over 30–60 s of steady traffic; report mean, median, and p95. Avoid using a single instant. (docs.espressif.com)
+* RAM: Use min_free_since_boot and largest_block after a long run. Track whether min_free_since_boot decreases over hours; if it does, you have a leak. (docs.espressif.com)
+* Stack: Let the system run through its worst‑case traffic; then log the headroom once it stabilizes. Smaller = closer to overflow. (docs.espressif.com)
+
+

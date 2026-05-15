@@ -195,10 +195,10 @@ class Config(BaseModel):
         return (0);
         
         
-
+# make the config file be passed a cmd arg
 def load_config() -> (int, Dict|None):
     try:
-        with open("config.json", "r", encoding="utf-8") as file:
+        with open("config.jsonc", "r", encoding="utf-8") as file:
             config: Dict = load(file)
     except JSONDecodeError as e:
         print(f"{__FILE__()}:{__LINE__()}: Failed to decode JSON: {e}",
