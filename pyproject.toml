@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# Standard project metadata
+name = "esp-csi-benchmarking"
+version = "0.1.0"
+description = "A benchmarking tool for CSI firmwares"
+readme = "README.md"
+requires-python = ">=3.10"
+
+# List of third-party dependencies required to run this project
+dependencies = [
+    "pyserial>=3.5",
+    "json5",
+]
+
+[project.scripts]
+# Automatically create a terminal command names 'esp-csi-bench'
+# It will run the `main()` function inside `src/main.py`
+esp-csi-bench = "src.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
