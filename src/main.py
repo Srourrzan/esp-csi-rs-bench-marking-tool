@@ -49,29 +49,21 @@ def main() -> int:
             info(f"Serial port {conf.usb_port} opened at {conf.baud_rate} baud.")
             init_serial(ser)
             while (True):
-                print(f"trying to read data")
                 try:
-                    print(f"start {type(start)} = {start}")
                     if start is not None:
-                        print(f"start is defined..")
                         if time() - start >= run_seconds:
                             info(f"stopped after {run_seconds} seconds")
                             break;
                     line = data.getline(ser, conf)
-                    print(f"line: {line}")
-                    if line in None:
+                    if line is None:
                         continue;
-                    # if data.line_count == 500:
-                    #     break;
                 except EmptyLineError as e:
                     debug(str(e))
                     continue;
                 if not data.header_parsed:
-                    print(f"pasring header....")
                     data.parse_header()
                     if data.header_parsed:
                         continue;
-                    print(f"header no parsed")
                 if data.header_parsed:
                     data.detect_firmware_type(conf)
                     if not start:

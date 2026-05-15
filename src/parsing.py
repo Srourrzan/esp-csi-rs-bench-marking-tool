@@ -26,9 +26,7 @@ class Data:
     
     def getline(self, ser: Serial, conf: Config) -> (str|None):
         """get the serial line """
-        print(f"getting a serial line")
         response: bytes = ser.readline()
-        print(f"response: {response}")
         # if response is None:
         #     print(f"response is empty")
         if not response:
@@ -40,7 +38,6 @@ class Data:
             return (None);
         _line: str = response.decode("utf-8", errors="ignore")
         self.line: str = _line.strip()
-        print(f"line:{self.line}")
         if not self.line:
             raise EmptyLineError("Recieved empty line")
         self.line_count += 1
@@ -72,6 +69,7 @@ class Data:
         _line = next(reader([self.line]))
         try:
             self.firmware_type = conf.firmwares[_line[0]]
+            print(f"{__FILE__()}:{__LINE__()} firmware: {self.firmware_type}")
         except KeyError:
             self.firmware_type = "unknown"
 

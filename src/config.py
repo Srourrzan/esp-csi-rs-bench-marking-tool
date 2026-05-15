@@ -1,9 +1,8 @@
-from sys import stderr;
+import json5
+from sys import stderr
 from pathlib import Path
 from os.path import join
-from datetime import datetime
-from typing import TypedDict, Dict
-from json import load, JSONDecodeError;
+from typing import Dict
 from pydantic import BaseModel, PrivateAttr
 from logging import FileHandler, StreamHandler, basicConfig
 
@@ -199,8 +198,8 @@ class Config(BaseModel):
 def load_config() -> (int, Dict|None):
     try:
         with open("config.jsonc", "r", encoding="utf-8") as file:
-            config: Dict = load(file)
-    except JSONDecodeError as e:
+            config: Dict = json5.load(file)
+    except json5.JSONDecodeError as e:
         print(f"{__FILE__()}:{__LINE__()}: Failed to decode JSON: {e}",
               file=stderr)
         return (-1, None);

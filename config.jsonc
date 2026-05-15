@@ -1,9 +1,11 @@
 {
-	"baud_rate": 921600,
+	// for Hernandez use 115200,
+	// for espressif use 921600
+	"baud_rate": 115200,
 	"timeout": 10,
 	"task": "resources",
 	"valid_tasks": ["latency", "resources", "throughput"],
-
+	"run_seconds": 60,
 	"log_dir": "logs",
 	"log_level": "INFO",
 	"csv_dir": "data_logs",
@@ -17,6 +19,11 @@
 		"CSI_DATA":
 		{
 			"name": "espressif",
+			"timestamp_label": "local_timestamp"
+		},
+		"CSI_DATA,PASSIVE":
+		{
+			"name": "Hernandez",
 			"timestamp_label": "local_timestamp"
 		}
 	}
