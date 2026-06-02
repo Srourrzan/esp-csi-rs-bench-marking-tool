@@ -85,3 +85,31 @@ How to get “accurate” (comparable) numbers
 * Stack: Let the system run through its worst‑case traffic; then log the headroom once it stabilizes. Smaller = closer to overflow. (docs.espressif.com)
 
 
+## Installation & Usage
+
+This project uses a standard `pyproject.toml` file to manage its configuration and dependencies. 
+
+### Setting up the Environment
+
+You can install this project directly into your Conda environment. This will automatically install dependencies like `pyserial` and `json5` using the `pip` provided by Conda, keeping them correctly isolated to your environment.
+
+1. Activate your Conda virtual environment:
+   ```bash
+   conda activate <your-environment-name>
+   ```
+
+2. Install the project in "editable mode" (`-e`). This means any changes you make to the source code will take effect immediately without needing to reinstall:
+   ```bash
+   pip install -e .
+   ```
+
+### Running the Tool
+
+Installing the project via `pyproject.toml` automatically creates an entry point script.
+Instead of having to run `python src/main.py`, you can now run the tool from anywhere using:
+
+```bash
+esp-csi-bench
+```
+
+*(Note: Your environment must be active for this command to be available.)*
