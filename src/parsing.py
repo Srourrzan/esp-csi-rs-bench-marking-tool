@@ -1,3 +1,4 @@
+import re
 from csv import reader
 from typing import List
 from serial import Serial
@@ -16,12 +17,13 @@ class EmptyLineError(Exception):
 
 @dataclass
 class Data:
-    line_count: int;
-    header_parsed: bool;
-    header: list = field(default_factory=list[str]);
-    col_index: dict = field(default_factory=dict);
-    line: str = field(init=False);
-    firmware_type: Firmware = field(init=False);
+    line_count: int
+    header_parsed: bool
+    header: list = field(default_factory=list[str])
+    col_index: dict = field(default_factory=dict)
+    firmware_type: Firmware = field(default_factory=Firmware)
+    line: str = field(init=False)
+    firmware_ded: bool = field(default=False)
 
     
     def getline(self, ser: Serial, conf: Config) -> (str|None):
@@ -36,6 +38,7 @@ class Data:
                     "Timeout waiting for header. check ESP connnection"
                 )
             return (None);
+        print(f"{__FILE__()}:{__LINE__()} response: {response}")
         _line: str = response.decode("utf-8", errors="ignore")
         self.line: str = _line.strip()
         if not self.line:
@@ -66,10 +69,19 @@ class Data:
     # steps)
     def detect_firmware_type(self, conf: Config) -> str:
         """Detects firmware type based on the first line."""
-        _line = next(reader([self.line]))
         try:
-            self.firmware_type = conf.firmwares[_line[0]]
-            print(f"{__FILE__()}:{__LINE__()} firmware: {self.firmware_type}")
+            if self.line and "cpu_start: Project name:" in self.line:
+                if isinstance(self.line, bytes):
+                    current_line = self.line.decode('utf-8', errors='ignore')
+                else:
+                    current_line = self.line
+                ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])') # add the regex to the config file
+                clean_line = ansi_escape.sub('', current_line).strip()
+                clean_line = clean_line.split(" ")
+                if 'csi' in clean_line:
+                    self.firmware_type = conf.firmwares[clean_line[-1]]
+                # exit(10);
+                self.firmware_ded = True;
         except KeyError:
             self.firmware_type = "unknown"
 
@@ -77,6 +89,10 @@ class Data:
     def parse_header(self):
         """Returns 0 on successful parsing and -1 on error"""
         try:
+            print("PARSING HEADER:....")
+            if self.firmware_type.data_header == False:
+                self.header_parsed = True
+                return ;
             self.__find_header()
             if self.header:
                 self.col_index = {name: i for i, name in enumerate(self.header)}

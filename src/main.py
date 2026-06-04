@@ -61,11 +61,12 @@ def main() -> int:
                     debug(str(e))
                     continue;
                 if not data.header_parsed:
+                    if not data.firmware_ded:
+                        data.detect_firmware_type(conf)
                     data.parse_header()
                     if data.header_parsed:
                         continue;
                 if data.header_parsed:
-                    data.detect_firmware_type(conf)
                     if not start:
                         start = time()
                     # now we need to measure the avg heap usage

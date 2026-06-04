@@ -1,12 +1,9 @@
-from sys import stderr;
+import threading
 from time import sleep;
 from serial import Serial;
 from serial.tools import list_ports;
-from csv import reader
-from typing import List
 
 from debug import __FILE__, __LINE__;
-from config import Config;
 
 
 class SerialTimeoutError(Exception):
@@ -38,5 +35,4 @@ def init_serial(serial: Serial):
     sleep(0.04)
     serial.reset_input_buffer()
     return ;
-
 
