@@ -26,25 +26,24 @@ class Data:
     firmware_ded: bool = field(default=False)
 
     
-    def getline(self, ser: Serial, conf: Config) -> (str|None):
+    def decodeline(self, raw_response: bytes):
         """get the serial line """
-        response: bytes = ser.readline()
-        # if response is None:
-        #     print(f"response is empty")
-        if not response:
-            debug(f"{__FILE__()}:{__LINE__()} No response from serial port.")
-            if self.line_count > conf.max_lines and not self.header_parsed:
-                raise SerialTimeoutError(
-                    "Timeout waiting for header. check ESP connnection"
-                )
-            return (None);
-        print(f"{__FILE__()}:{__LINE__()} response: {response}")
-        _line: str = response.decode("utf-8", errors="ignore")
+        # response: bytes = ser.readline()
+        # if not response:
+        #     debug(f"{__FILE__()}:{__LINE__()} No response from serial port.")
+        #     if self.line_count > conf.max_lines and not self.header_parsed:
+        #         raise SerialTimeoutError(
+        #             "Timeout waiting for header. check ESP connnection"
+        #         )
+        #     return (None);
+        # print(f"{__FILE__()}:{__LINE__()} response: {response}")
+        _line: str = raw_response.decode("utf-8", errors="ignore")
         self.line: str = _line.strip()
         if not self.line:
             raise EmptyLineError("Recieved empty line")
         self.line_count += 1
-        return (self.line);
+        return ;
+        # return (self.line);
 
 
     def __find_header(self) -> List:
@@ -71,19 +70,15 @@ class Data:
         """Detects firmware type based on the first line."""
         try:
             if self.line and "cpu_start: Project name:" in self.line:
-                if isinstance(self.line, bytes):
-                    current_line = self.line.decode('utf-8', errors='ignore')
-                else:
-                    current_line = self.line
                 ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])') # add the regex to the config file
-                clean_line = ansi_escape.sub('', current_line).strip()
+                clean_line = ansi_escape.sub('', self.line).strip()
                 clean_line = clean_line.split(" ")
                 if 'csi' in clean_line:
                     self.firmware_type = conf.firmwares[clean_line[-1]]
                 # exit(10);
                 self.firmware_ded = True;
         except KeyError:
-            self.firmware_type = "unknown"
+            self.firmware_type.name = "unknown"
 
 
     def parse_header(self):
@@ -101,3 +96,11 @@ class Data:
             raise RuntimeError(
                 f"{__FILE__()}:{__LINE__()} Encountered an error from {e}"
             ) from e
+        
+    def parsed_tracking_rules(self, conf: Config) -> bool:
+        if not self.firmware_ded:
+            self.detect_firmware_type(conf)
+        self.parse_header()
+        if self.header_parsed:
+            return (True);
+        return (False);

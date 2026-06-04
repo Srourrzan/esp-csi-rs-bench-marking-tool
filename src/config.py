@@ -1,8 +1,8 @@
 import json5
 from sys import stderr
+from typing import Dict
 from pathlib import Path
 from os.path import join
-from typing import Dict
 from pydantic import BaseModel, PrivateAttr
 from logging import FileHandler, StreamHandler, basicConfig
 
@@ -154,7 +154,7 @@ class Config(BaseModel):
             raise ValueError(
                 f"{__FILE__()}:{__LINE__()}: task type was not set"
             )
-        self.__valid_tasks = json_configs["output_csv_file"]
+        self.__valid_tasks = json_configs["valid_tasks"]
         if not self.__valid_tasks:
             raise ValueError(
                 f"{__FILE__()}:{__LINE__()}: valid task types was not set"

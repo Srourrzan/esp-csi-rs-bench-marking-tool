@@ -85,6 +85,17 @@ How to get “accurate” (comparable) numbers
 * Stack: Let the system run through its worst‑case traffic; then log the headroom once it stabilizes. Smaller = closer to overflow. (docs.espressif.com)
 
 
+## The Architecture Strategy
+
+Instead of executing everything inline within a blocking loop, we will decouple the architecture:
+
+- Producer (Thread): A lightweight background thread whose exclusive job is to pull lines out of serial.readline() as fast as possible and append them into a fast, in-memory queue.Queue.
+
+- Main Engine / Coordinator (Main Thread): Pulls raw strings out of the local queue, feeds them through the regex cleaning and firmware matching logic, and passes off the specialized lines to downstream components.
+
+- Resources Worker (Separate Process): It continues running on its own CPU core, picking up performance-monitoring string matches forwarded from the engine.
+
+
 ## Installation & Usage
 
 This project uses a standard `pyproject.toml` file to manage its configuration and dependencies. 

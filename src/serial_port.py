@@ -1,7 +1,8 @@
+import queue
 import threading
-from time import sleep;
-from serial import Serial;
-from serial.tools import list_ports;
+from time import sleep
+from serial import Serial
+from serial.tools import list_ports
 
 from debug import __FILE__, __LINE__;
 
@@ -36,3 +37,16 @@ def init_serial(serial: Serial):
     serial.reset_input_buffer()
     return ;
 
+def serial_producer(ser: Serial, raw_line_queue: queue.Queue, stop_event: threading.Event):
+    """
+    Dedicated worker thread that consumes hardware data as fast as the serial 
+    buffer provides it, mitigating hardware buffer overflows.
+    """
+    while not stop_event.is_set():
+        try:
+            # Keep a small serial timeout so it checks the stop_event periodically
+            response = ser.readline()
+            if response:
+                raw_line_queue.put(response)
+        except Exception:
+            break

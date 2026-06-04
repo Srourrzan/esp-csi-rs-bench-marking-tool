@@ -7,7 +7,7 @@ from debug import __FILE__, __LINE__
 class Firmware:
     name: str = "";
     timestamp_label: str = "";
-    data_header: bool = "True";
+    data_header: bool = True;
 
     @classmethod
     def from_dict(cls, data: Dict[str, str]) -> 'Firmware':

@@ -26,21 +26,20 @@
 		{
 			"name": "espressif",
 			"timestamp_label": "local_timestamp",
-			"data_header": "True"
+			"data_header": true
 		},
 		"CSI_DATA,PASSIVE": //fix
 		{
 			"name": "Hernandez",
 			"timestamp_label": "local_timestamp",
-			"data_header": "True"
+			"data_header": true
 		},
 		"csi":
 		{
 			"name": "Wi-ESP",
 			"timestamp_label": "last_value", // the Wi-ESP does not print header for the csi data, 
 			// it prints the timestamp as the last value in the line
-			"data_header": "False"
+			"data_header": false
 		}
 	}
-	// "regex_express": "\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"
 }
