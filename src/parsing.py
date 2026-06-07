@@ -66,7 +66,7 @@ class Data:
     # then in the first csi data line, we take the indicator 
     # and we detact the firmware from it (try to make it parallel to other calculation
     # steps)
-    def detect_firmware_type(self, conf: Config) -> str:
+    def detect_firmware_type(self, conf: Config):
         """Detects firmware type based on the first line."""
         try:
             if self.line and "cpu_start: Project name:" in self.line:
@@ -84,7 +84,6 @@ class Data:
     def parse_header(self):
         """Returns 0 on successful parsing and -1 on error"""
         try:
-            print("PARSING HEADER:....")
             if self.firmware_type.data_header == False:
                 self.header_parsed = True
                 return ;
@@ -104,3 +103,20 @@ class Data:
         if self.header_parsed:
             return (True);
         return (False);
+
+    def get_esp_ts(self) -> int:
+        esp_ts = None
+        fields = self.line.split(self.firmware_type.delimater)
+        if fields:
+            try:
+                if (self.firmware_type.timestamp_label == "last_value"):
+                    esp_ts = int(fields[-2].strip())
+                else:
+                    idx = self.col_index[self.firmware_type.timestamp_label]
+                    esp_ts = int(fields[idx].strip())
+            except (ValueError, IndexError):
+                pass
+        if esp_ts is None:
+            print(f"{__FILE__()}:{__LINE__()} esp_ts: {esp_ts}")
+            print(f"line: {self.line}")
+        return (esp_ts);

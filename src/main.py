@@ -1,21 +1,19 @@
 import queue
 import threading
-from time import time
-from typing import List
 from sys import exit, stderr
-from logging import error, info, debug;
-from statistics import median, quantiles;
-from serial import Serial, SerialException;
-from multiprocessing import Queue, Event, Process
+from time import time, time_ns
+from logging import error, info#, debug;
+from serial import Serial, SerialException
 
-from stats import Stats;
-from parsing import Data;
-from config import Config;
-from utils import validate_sys;
-from debug import __FILE__, __LINE__;
-from parsing import EmptyLineError, Data;
-from serial_port import init_serial, SerialTimeoutError, serial_producer
+from parsing import Data
+from config import Config
+from utils import validate_sys
+from debug import __FILE__, __LINE__
+from system_process import SysProcess
+from parsing import EmptyLineError, Data
+from latency_worker import start_latency_process
 from resources_worker import start_resources_process
+from serial_port import init_serial, SerialTimeoutError, serial_producer
 
 
 def main() -> int:
@@ -23,51 +21,49 @@ def main() -> int:
     status: int
     conf: Config
     start = None
+    sys_procs = SysProcess()
 
     status, conf = validate_sys()
     if (status < 0):
         return (1);
     if (conf.setup_logging() < -1):
         return (1);
+    
+    task_conf = conf.task
+    task_list = [task_conf] if isinstance(task_conf, str) else task_conf
     # Start resources worker if requested (accept str or list in future)
-    run_seconds = getattr(conf, "run_seconds", 60) #run for 60 sec, add to config 
-    resources_enabled = ((conf.task == "resources") or 
-                         (isinstance(conf.task, list) and "resources" in conf.task))
-    res_que: Queue = None
-    res_stop: Event = None
-    res_proc: Process = None
+    resources_enabled = "resources" in task_list
+    latency_enabled = "latency" in task_list
+    data = Data(line_count = 0, header_parsed = False);
     if resources_enabled:
-        res_que, res_stop, res_proc = start_resources_process(conf)
+        sys_procs.res_que, sys_procs.res_stop, sys_procs.res_proc = start_resources_process(conf)
         print(f"resources worker is set")
-    statis = None
-    producer_thread = None
+    if latency_enabled:
+        sys_procs.lat_que, sys_procs.lat_stop, sys_procs.lat_proc = start_latency_process(conf, data)
     thread_stop = threading.Event()
 
     try:
-        statis = Stats(conf.csv_filename, conf.stats_filename)
-        data = Data(line_count = 0, header_parsed = False);
-        statis.setup_csv_files(conf)
-        print(f"{__FILE__()}:{__LINE__()} statis csv files are set")
         with Serial(conf.usb_port, conf.baud_rate, timeout=conf.timeout) as ser:
             info(f"{__FILE__()}:{__LINE__()} Serial port {conf.usb_port} opened at {conf.baud_rate} baud.")
             init_serial(ser)
 
             # Initialize fst local thread queue
-            raw_queue = queue.Queue(maxsize=50000)
+            raw_queue = queue.Queue(maxsize=conf.queue_config.max_queue_size)
             # Spin up the I/O concurrent producer thread
-            producer_thread = threading.Thread(
+            sys_procs.producer_thread = threading.Thread(
                 target=serial_producer,
                 args=(ser, raw_queue, thread_stop),
                 daemon=True
             )
-            producer_thread.start()
+            sys_procs.producer_thread.start()
             while (True):
-                if start is not None and (time() - start >= run_seconds):
-                    info(f"{__FILE__()}:{__LINE__()} stopped after {run_seconds} seconds")
+                if start is not None and (time() - start >= conf.run_seconds):
+                    info(f"{__FILE__()}:{__LINE__()} stopped after {conf.run_seconds} seconds")
                     break;
                 try:
                     # Non-blocking fetch from local producer queue
-                    raw_response = raw_queue.get(timeout=0.2)
+                    raw_response = raw_queue.get(timeout=conf.queue_config.queue_timeout)
+                    host_ts = time_ns()
                     data.decodeline(raw_response=raw_response)
                 except queue.Empty:
                     continue
@@ -79,15 +75,27 @@ def main() -> int:
                 else:
                     if not start:
                         start = time()
+                    # is_resource_line = False
+                    lower_line = data.line.lower()
                     # now we need to measure the avg heap usage
                     # We forward matching outputs down to our sub-prcess queue
-                    if resources_enabled and res_que is not None:
-                        try:
-                            res_que.put_nowait(data.line)
-                        except queue.Full:
-                            # drop if back-pressured; resource worker still computes summary
-                            pass
-                        # TODO latency/throughput 
+                    if "resmon:" in lower_line or "cpu:" in lower_line:
+                        if resources_enabled and sys_procs.res_que is not None:
+                            try:
+                                sys_procs.res_que.put_nowait(data.line)
+                            except queue.Full:
+                                # drop if back-pressured; resource worker still computes summary
+                                pass
+                    else:
+                        esp_ts = data.get_esp_ts()
+                        if esp_ts is None:
+                            continue
+                        if latency_enabled and sys_procs.lat_que is not None:
+                            try:
+                                sys_procs.lat_que.put_nowait((host_ts, esp_ts))
+                            except queue.Full:
+                                pass
+                            # TODO throughput 
 
     except SerialTimeoutError as e:
         error(str(e))
@@ -115,23 +123,23 @@ def main() -> int:
     finally:
         # 1. Gracefully bring down the raw serial reader thread
         thread_stop.set()
-        if producer_thread and producer_thread.is_alive():
-            producer_thread.join(timeout=2.0)
+        if sys_procs.producer_thread and sys_procs.producer_thread.is_alive():
+            sys_procs.producer_thread.join(timeout=2.0)
         # 2. Shutdown resource worker subprocess
-        if resources_enabled and res_proc is not None:
-            res_stop.set()
+        if resources_enabled and sys_procs.res_proc is not None:
+            sys_procs.res_stop.set()
             try:
-                res_que.put_nowait(None)
+                sys_procs.res_que.put_nowait(None)
             except Exception:
                 pass
-            res_proc.join(timeout=5)
-        if statis and statis.deltas:
-            # if stats_file_handle:
-            #     write_final_stats_csv(stats_csv_writer, deltas, BAUD_RATE, firmware_type)
-            info(f"Collected {len(deltas)} samples.")
-            info(f"Raw data CSV saved to: {conf.csv_filename}")
-            info(f"Statistics CSV saved to: {conf.stats_filename}")
-            statis.close();
+            sys_procs.res_proc.join(timeout=5)
+        if latency_enabled and sys_procs.lat_proc is not None:
+            sys_procs.lat_stop.set()
+            try:
+                sys_procs.lat_que.put_nowait(("SHUTDOWN", data.firmware_type.name))
+            except Exception:
+                pass
+            sys_procs.lat_proc.join(timeout=5)
         else:
             info("No CSI data collected")
         info(f"Runtime log saved to: logs/runtime_{conf.run_ts}.log")

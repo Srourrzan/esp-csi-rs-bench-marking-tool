@@ -128,7 +128,7 @@ def __resource_worker_main(que: Queue, stop: Event, wdict: dict) -> None:
         while True:
             try:
                 _line = que.get(timeout=0.5)
-                print(f"resource worker line: {_line}")
+                # print(f"resource worker line: {_line}")
             except queue.Empty:
                 if stop.is_set():
                     break
@@ -166,6 +166,3 @@ def start_resources_process(conf: Config) -> tuple[Queue, Event, Process]:
     )
     proc.start()
     return (que, stop, proc);
-
-
-

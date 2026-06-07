@@ -4,7 +4,7 @@
 	// for Wi-ESP use 115200
 	"baud_rate": 115200,
 	"timeout": 10,
-	"task": "resources",
+	"task": "latency",
 	"valid_tasks": ["latency", "resources", "throughput"],
 	"run_seconds": 60,
 	"log_dir": "logs",
@@ -14,7 +14,11 @@
 	"output_csv_file": "csi_latency_data.csv",
 	"stats_file_prefix": "csi_latency_stats_",
 	"max_lines": 500,
-
+	// queue settings
+	"queue_config": {
+		"queue_timeout": 0.5,
+		"max_queue_size": 50000
+	},
 	"firmware_types":
 	{
 		// I will change the logic of finding the type of the csi firmware,
@@ -26,20 +30,23 @@
 		{
 			"name": "espressif",
 			"timestamp_label": "local_timestamp",
-			"data_header": true
+			"data_header": true,
+			"delimater": ","
 		},
 		"CSI_DATA,PASSIVE": //fix
 		{
 			"name": "Hernandez",
 			"timestamp_label": "local_timestamp",
-			"data_header": true
+			"data_header": true,
+			"delimater": ","
 		},
 		"csi":
 		{
 			"name": "Wi-ESP",
 			"timestamp_label": "last_value", // the Wi-ESP does not print header for the csi data, 
 			// it prints the timestamp as the last value in the line
-			"data_header": false
+			"data_header": false,
+			"delimater": ":"
 		}
 	}
 }

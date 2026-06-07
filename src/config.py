@@ -7,10 +7,12 @@ from pydantic import BaseModel, PrivateAttr
 from logging import FileHandler, StreamHandler, basicConfig
 
 from firmware import Firmware
+from queue_config import QueueConfig
 from debug import __FILE__, __LINE__
 
 class Config(BaseModel):
     run_ts: str;
+    __run_seconds: int = PrivateAttr();
     __usb_port: str = PrivateAttr();
     __baud_rate: int = PrivateAttr();
     __timeout: int = PrivateAttr();
@@ -24,6 +26,16 @@ class Config(BaseModel):
     __stats_file_prefix: str = PrivateAttr();
     __max_lines: str = PrivateAttr();
     __firmwares: Dict[str, Firmware] = PrivateAttr();
+    __queue_config: QueueConfig = PrivateAttr();
+
+    @property
+    def run_seconds(self) -> int:
+        return (self.__run_seconds);
+
+    # @run_seconds.setter
+    # def run_seconds(self, value: int = 0):
+    #     self.__run_seconds = value
+    #     return ;
 
     @property
     def usb_port(self) -> str:
@@ -90,6 +102,10 @@ class Config(BaseModel):
     def firmwares(self) -> Dict[str, Firmware]:
         return (self.__firmwares);
 
+    @property
+    def queue_config(self) -> QueueConfig:
+        return (self.__queue_config);
+
     
     def __validate_firmwares(self, json_configs: Dict):
         self.__firmwares= {}
@@ -101,6 +117,8 @@ class Config(BaseModel):
             firmware = Firmware.from_dict(properties)
             self.__firmwares[indicator] = firmware
 
+    def __queue_conf(self, json_configs: Dict):
+        self.__queue_config = QueueConfig.from_dict(json_configs["queue_config"])
             
     def __serial_port_conf(self, json_configs: Dict):
         self.__baud_rate = json_configs["baud_rate"]
@@ -149,6 +167,11 @@ class Config(BaseModel):
         
     def validate_configs(self, json_configs: Dict) -> int:
         """"""
+        self.__run_seconds = json_configs["run_seconds"]
+        if not self.__run_seconds:
+            raise ValueError(
+                f"{__FILE__()}:{__LINE__()}: run seconds was not set"
+            )
         self.__task = json_configs["task"]
         if not self.__task:
             raise ValueError(
@@ -164,9 +187,10 @@ class Config(BaseModel):
             self.__max_lines = 500
             print(f"setting max lines before header timeout to 500")
         try:
-            self.__serial_port_conf(json_configs)
-            self.__logging_conf(json_configs)
-            self.__validate_firmwares(json_configs)
+            self.__serial_port_conf(json_configs=json_configs)
+            self.__logging_conf(json_configs=json_configs)
+            self.__validate_firmwares(json_configs=json_configs)
+            self.__queue_conf(json_configs=json_configs)
         except Exception as e:
             raise RuntimeError(
                 f"{__FILE__()}:{__LINE__()}: runtime error from {e}"
