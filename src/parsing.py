@@ -114,6 +114,8 @@ class Data:
                 else:
                     idx = self.col_index[self.firmware_type.timestamp_label]
                     esp_ts = int(fields[idx].strip())
+                print(f"{__FILE__()}:{__LINE__()} esp_ts: {esp_ts}")
+                
             except (ValueError, IndexError):
                 pass
         if esp_ts is None:

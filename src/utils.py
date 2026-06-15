@@ -1,7 +1,7 @@
 import subprocess;
 from typing import Dict;
 from time import time_ns;
-from sys import exit, stderr;
+from sys import stderr;
 from datetime import datetime;
 from serial_port import find_port;
 

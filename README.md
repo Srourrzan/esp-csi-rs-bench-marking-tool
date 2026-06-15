@@ -73,6 +73,14 @@ Instead of executing everything inline within a blocking loop, we will decouple 
 
 - Resources Worker (Separate Process): It continues running on its own CPU core, picking up performance-monitoring string matches forwarded from the engine.
 
+## Throughput strategy 
+
+Because processing throughput on a single-line basis is highly inefficient, the correct pattern is Time-Windowed Aggregation:
+
+- The Main Thread (main.py) flags every time a valid CSI data line is successfully parsed. It will push a timestamped notification token down to a dedicated Throughput Process.
+
+- The Throughput Worker keeps a rolling counter. Every time 1 second passes, it flushes that count to a raw data log (e.g., 450 samples/sec) and calculates rolling performance stats.
+
 
 ## Installation & Usage
 

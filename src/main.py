@@ -11,8 +11,6 @@ from utils import validate_sys
 from debug import __FILE__, __LINE__
 from system_process import SysProcess
 from parsing import EmptyLineError, Data
-from latency_worker import start_latency_process
-from resources_worker import start_resources_process
 from serial_port import init_serial, SerialTimeoutError, serial_producer
 
 
@@ -21,7 +19,6 @@ def main() -> int:
     status: int
     conf: Config
     start = None
-    sys_procs = SysProcess()
 
     status, conf = validate_sys()
     if (status < 0):
@@ -29,24 +26,15 @@ def main() -> int:
     if (conf.setup_logging() < -1):
         return (1);
     
-    task_conf = conf.task
-    task_list = [task_conf] if isinstance(task_conf, str) else task_conf
-    # Start resources worker if requested (accept str or list in future)
-    resources_enabled = "resources" in task_list
-    latency_enabled = "latency" in task_list
-    data = Data(line_count = 0, header_parsed = False);
-    if resources_enabled:
-        sys_procs.res_que, sys_procs.res_stop, sys_procs.res_proc = start_resources_process(conf)
-        print(f"resources worker is set")
-    if latency_enabled:
-        sys_procs.lat_que, sys_procs.lat_stop, sys_procs.lat_proc = start_latency_process(conf, data)
+    sys_procs = SysProcess()
+    data = Data(line_count = 0, header_parsed = False); 
+    sys_procs.init_processes(conf, data)
     thread_stop = threading.Event()
 
     try:
         with Serial(conf.usb_port, conf.baud_rate, timeout=conf.timeout) as ser:
             info(f"{__FILE__()}:{__LINE__()} Serial port {conf.usb_port} opened at {conf.baud_rate} baud.")
             init_serial(ser)
-
             # Initialize fst local thread queue
             raw_queue = queue.Queue(maxsize=conf.queue_config.max_queue_size)
             # Spin up the I/O concurrent producer thread
@@ -75,27 +63,33 @@ def main() -> int:
                 else:
                     if not start:
                         start = time()
-                    # is_resource_line = False
                     lower_line = data.line.lower()
+                    print(f"{__FILE__()}:{__LINE__()} line={lower_line}")
                     # now we need to measure the avg heap usage
                     # We forward matching outputs down to our sub-prcess queue
-                    if "resmon:" in lower_line or "cpu:" in lower_line:
-                        if resources_enabled and sys_procs.res_que is not None:
+                    if sys_procs.enabled_processes["resources"] and sys_procs.res_que is not None:
+                        if "resmon:" in lower_line or "cpu:" in lower_line:
                             try:
                                 sys_procs.res_que.put_nowait(data.line)
                             except queue.Full:
                                 # drop if back-pressured; resource worker still computes summary
                                 pass
-                    else:
-                        esp_ts = data.get_esp_ts()
-                        if esp_ts is None:
-                            continue
-                        if latency_enabled and sys_procs.lat_que is not None:
-                            try:
-                                sys_procs.lat_que.put_nowait((host_ts, esp_ts))
-                            except queue.Full:
-                                pass
-                            # TODO throughput 
+                # else:
+                    esp_ts = data.get_esp_ts()
+                    if esp_ts is None:
+                        continue
+                    if sys_procs.enabled_processes["latency"] and sys_procs.lat_que is not None:
+                        try:
+                            sys_procs.lat_que.put_nowait((host_ts, esp_ts))
+                        except queue.Full:
+                            pass
+                    if sys_procs.enabled_processes["throughput"] and sys_procs.tp_que is not None:
+                        try:
+                            # Send a low-overhead signal tag indicating a sample was processed
+                            sys_procs.tp_que.put_nowait("TICK")
+                        except queue.Full:
+                            pass
+                
 
     except SerialTimeoutError as e:
         error(str(e))
@@ -126,21 +120,31 @@ def main() -> int:
         if sys_procs.producer_thread and sys_procs.producer_thread.is_alive():
             sys_procs.producer_thread.join(timeout=2.0)
         # 2. Shutdown resource worker subprocess
-        if resources_enabled and sys_procs.res_proc is not None:
+        if sys_procs.enabled_processes.get("resources") and sys_procs.res_proc is not None:
             sys_procs.res_stop.set()
             try:
                 sys_procs.res_que.put_nowait(None)
             except Exception:
                 pass
             sys_procs.res_proc.join(timeout=5)
-        if latency_enabled and sys_procs.lat_proc is not None:
+        # 3. Shutdown latency worker subprocess
+        if sys_procs.enabled_processes.get("latency") and sys_procs.lat_proc is not None:
             sys_procs.lat_stop.set()
             try:
                 sys_procs.lat_que.put_nowait(("SHUTDOWN", data.firmware_type.name))
             except Exception:
                 pass
             sys_procs.lat_proc.join(timeout=5)
-        else:
+        # 4. Shutdown throughput worker subprocess cleanly
+        if sys_procs.enabled_processes.get("throughput") and sys_procs.tp_proc is not None:
+            sys_procs.tp_stop.set()
+            try:
+                fw_name = data.firmware_type.name if data.firmware_ded else "unknown"
+                sys_procs.tp_que.put_nowait(("SHUTDOWN", fw_name))
+            except Exception:
+                pass
+            sys_procs.tp_proc.join(timeout=5)
+        if data.line_count == 0:
             info("No CSI data collected")
         info(f"Runtime log saved to: logs/runtime_{conf.run_ts}.log")
     return (status);

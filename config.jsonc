@@ -4,7 +4,9 @@
 	// for Wi-ESP use 115200
 	"baud_rate": 115200,
 	"timeout": 10,
-	"task": "latency",
+	// this line should contain the tasks the user wish to perform
+	"task": "throughput",
+	// this line should contain all the tasks that system can perform
 	"valid_tasks": ["latency", "resources", "throughput"],
 	"run_seconds": 60,
 	"log_dir": "logs",
