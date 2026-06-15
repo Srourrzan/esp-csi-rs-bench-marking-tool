@@ -1,15 +1,12 @@
 import queue
 import importlib
 from sys import stderr
-from typing import Dict, List, Callable
-from dataclasses import dataclass, field
+from typing import Dict, Callable
+from dataclasses import dataclass
 from multiprocessing import Queue as mpQueue, Event as mpEvent, Process
 
 from parsing import Data
 from config import Config
-# from workers.latency_worker import start_latency_process
-# from workers.resources_worker import start_resources_process
-# from workers.throughput_worker import start_throughput_process
 
 
 @dataclass
@@ -37,16 +34,13 @@ class SysProcess:
             try:
                 # 1. Dynamically construct the file path name string on the fly
                 # e.g., "latency" -> module name "workers.latency_worker"
-                module_name = f"workers.{task_name}_worker"
-                
+                module_name = f"{task_name}_worker"
                 # 2. Programmatically import the module file from your filesystem
                 worker_module = importlib.import_module(module_name)
-                
                 # 3. Look up the factory function dynamically inside that imported module file
                 # e.g., expects a function named "start_latency_process" inside latency_worker.py
                 function_name = f"start_{task_name}_process"
                 start_factory = getattr(worker_module, function_name)
-                
                 # 4. If found, register it as an authorized system capability
                 self._WORKER_REGISTRY[task_name] = start_factory
                 
@@ -73,6 +67,10 @@ class SysProcess:
             que, stop, proc = start_factory(conf, data)
             self.active_tasks[task_name] = ActiveTask(que=que, stop=stop, proc=proc)
 
+    def is_enabled(self, task_name: str) -> bool:
+        """Helper tool to check if a specific pipeline processing state is active."""
+        return task_name in self.active_tasks
+
     def send_to_task(self, task_name: str, payload):
         """Safely delivers metrics payloads down active pipelines."""
         if task_name in self.active_tasks:
@@ -95,3 +93,23 @@ class SysProcess:
         for task in self.active_tasks.values():
             if task.proc and task.proc.is_alive():
                 task.proc.join(timeout=3.0)
+
+    def route_payloads(
+        self,
+        line_kind: str,
+        raw_line: str,
+        host_us: int,
+        esp_ts: int
+    ):
+        """
+        Dynamically distributes structured payloads to all active worker processes 
+        based on the classified line kind, removing hardcoded routing hooks from main.
+        """
+        if line_kind == "resources":
+            self.send_to_task("resources", raw_line)
+        elif line_kind == "metrics":
+            # Automatically forward data only if the respective worker was initialized
+            if self.is_enabled("latency"):
+                self.send_to_task("latency", (host_us, esp_ts))
+            if self.is_enabled("throughput"):
+                self.send_to_task("throughput", "TICK")

@@ -1,7 +1,7 @@
 import queue
 import threading
+from time import time
 from sys import exit, stderr
-from time import time, time_ns
 from logging import error, info#, debug;
 from serial import Serial, SerialException
 
@@ -9,7 +9,7 @@ from parsing import Data
 from config import Config
 from utils import validate_sys
 from debug import __FILE__, __LINE__
-from system_process import SysProcess
+from workers.system_process import SysProcess
 from parsing import EmptyLineError, Data
 from serial_port import init_serial, SerialTimeoutError, serial_producer
 
@@ -63,20 +63,22 @@ def main() -> int:
                 else:
                     if not start:
                         start = time()
-                    lower_line = data.line.lower()
-                    print(f"{__FILE__()}:{__LINE__()} line={lower_line}")
-                    # now we need to measure the avg heap usage
-                    # We forward matching outputs down to our sub-prcess queue
-                    if "resmon:" in lower_line or "cpu:" in lower_line:
-                        sys_procs.send_to_task("resources", data.line)
-                            
-                    esp_ts = data.get_esp_ts()
-                    if esp_ts is None:
+                    # lower_line = data.line.lower()
+                    print(f"{__FILE__()}:{__LINE__()} line={data.line}")
+                    # 1. Ask the data engine what kind of line we are dealing with
+                    line_kind = data.get_line_kind()
+                    # 2. Extract hardware time parameters (returns None safely for resource lines)
+                    esp_ts = data.get_esp_ts() if line_kind == "metrics" else None
+                    # Safety validation gate: if a metrics line failed to split a valid timestamp, drop it
+                    if line_kind == "metrics" and esp_ts is None:
                         continue
-                    # Deliver payloads seamlessly down active pipes safely
-                    sys_procs.send_to_task("latency", (host_us, esp_ts))
-                    sys_procs.send_to_task("throughput", "TICK")
-                
+                    # 3. Hand everything off to the process manager to handle routing dynamically!
+                    sys_procs.route_payloads(
+                        line_kind=line_kind,
+                        raw_line=data.line,
+                        host_us=host_us,
+                        esp_ts=esp_ts
+                    )
 
     except SerialTimeoutError as e:
         error(str(e))
@@ -91,13 +93,6 @@ def main() -> int:
         status = 2;
     except KeyboardInterrupt:
         print("\nStopped by user.")
-        # if resources_enabled and res_proc is not None:
-        #     res_stop.set()
-        #     try:
-        #         res_que.put_nowait(None)
-        #     except Exception:
-        #         pass
-        #     res_proc.join(timeout=10)
         status = 127;
     # except Exception as e:
     #     print(f"{__FILE__()}:{__LINE__()} Unexpected error: {e}", file=stderr);
@@ -112,7 +107,7 @@ def main() -> int:
         sys_procs.shutdown_all(fw_name)
         if data.line_count == 0:
             info("No CSI data collected")
-        info(f"Runtime log saved to: logs/runtime_{conf.run_ts}.log")
+        info("Benchmark run completed.")
     return (status);
 
 if __name__ == "__main__":

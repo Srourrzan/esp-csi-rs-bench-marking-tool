@@ -110,3 +110,17 @@ class Data:
             print(f"{__FILE__()}:{__LINE__()} esp_ts: {esp_ts}")
             print(f"line: {self.line}")
         return (esp_ts);
+
+    def get_line_kind(self) -> str:
+        """
+        Classifies the current line payload to determine its routing destination.
+        Returns: "resources", "metrics", or "noise"
+        """
+        if not self.line:
+            return "noise"
+        
+        lower_line = self.line.lower()
+        if "resmon:" in lower_line or "cpu:" in lower_line:
+            return "resources"
+        # If it doesn't look like an explicit resource line, assume it's potential CSI data
+        return "metrics"

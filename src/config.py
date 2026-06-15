@@ -200,14 +200,11 @@ class Config(BaseModel):
     def setup_logging(self) -> int:
         """"""
         try:
-            Path(self.__log_dir).mkdir(parents=True, exist_ok=True)
-            log_filename = join(self.__log_dir,
-                                f"runtime_{self.run_ts}.log")
             basicConfig(
                 level=self.__log_level,
                 format='%(asctime)s - %(levelname)s - %(message)s',
                 handlers=[
-                    FileHandler(log_filename),
+                    # FileHandler(log_filename),
                     StreamHandler()
                 ]
             )
