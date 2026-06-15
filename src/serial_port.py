@@ -1,6 +1,6 @@
 import queue
 import threading
-from time import sleep
+from time import sleep, time_ns
 from serial import Serial
 from serial.tools import list_ports
 
@@ -47,6 +47,9 @@ def serial_producer(ser: Serial, raw_line_queue: queue.Queue, stop_event: thread
             # Keep a small serial timeout so it checks the stop_event periodically
             response = ser.readline()
             if response:
-                raw_line_queue.put(response)
+                # Capture the host arrival time immediately on hardware read
+                arrival_us = time_ns() // 1_000
+                # Pack them together as a tuple before putting it intp the queue
+                raw_line_queue.put((response, arrival_us))
         except Exception:
             break

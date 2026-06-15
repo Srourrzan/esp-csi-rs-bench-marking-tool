@@ -4,14 +4,15 @@ import os
 import time
 import queue
 import signal
+from typing import Optional
 from re import IGNORECASE, compile
 from dataclasses import dataclass,field
 from statistics import mean, median, quantiles
 from multiprocessing import Process, Queue, Event
-from typing import Optional
 
-from file_setup import FileSetup
+from parsing import Data
 from config import Config
+from file_setup import FileSetup
 
 # Tolerant to ASCII hyphen, Unicode hyphen, en-dash, etc.
 WI_FI = r"Wi[\-\u2010\u2011\u2012\u2013]?\s*Fi"
@@ -34,6 +35,7 @@ class WorkerConf:
     run_ts: str
     baud_rate: int
     csv_dir: str
+    firmware_name: str = "unknown"
     raw_prefix: str = "resources_data_"
     stats_prefix: str = "resources_stats_"
 
@@ -60,7 +62,7 @@ class ResourcesStats:
             "stack_headroom_B","cpu_percent"
             ])
         self.stats.write_row([
-            "timestamp","baud_rate",
+            "timestamp","baud_rate", "firmware_type",
             "total_cpu_samples","cpu_mean_pct",
             "cpu_median_pct","cpu_p95_pct",
             "heap_min_free_start_B","heap_min_free_end_B",
@@ -104,6 +106,7 @@ class ResourcesStats:
         self.stats.write_row([
             w.run_ts,
             w.baud_rate,
+            w.firmware_name,
             len(self.cpu_samples),
             f"{m:.2f}",
             f"{med:.2f}",
@@ -149,11 +152,12 @@ def __resource_worker_main(que: Queue, stop: Event, wdict: dict) -> None:
         rs.finalize(w)
     return ;
 
-def start_resources_process(conf: Config) -> tuple[Queue, Event, Process]:
+def start_resources_process(conf: Config, data: Data) -> tuple[Queue, Event, Process]:
     wdict = dict(
         run_ts=conf.run_ts, 
         baud_rate=conf.baud_rate, 
-        csv_dir=conf.csv_dir
+        csv_dir=conf.csv_dir,
+        firmware_name=data.firmware_type.name
     )
     print(f"worker dict {wdict}")
     que = Queue(maxsize=10_000)

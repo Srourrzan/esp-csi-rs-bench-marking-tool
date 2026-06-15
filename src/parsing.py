@@ -1,14 +1,11 @@
 import re
 from csv import reader
 from typing import List
-from serial import Serial
-from logging import debug
 
 from config import Config
 from firmware import Firmware
 from debug import __FILE__, __LINE__
 from dataclasses import dataclass, field
-from serial_port import SerialTimeoutError
 
 class EmptyLineError(Exception):
     """Custom exception to signal an empty line from serial data"""
@@ -28,15 +25,6 @@ class Data:
     
     def decodeline(self, raw_response: bytes):
         """get the serial line """
-        # response: bytes = ser.readline()
-        # if not response:
-        #     debug(f"{__FILE__()}:{__LINE__()} No response from serial port.")
-        #     if self.line_count > conf.max_lines and not self.header_parsed:
-        #         raise SerialTimeoutError(
-        #             "Timeout waiting for header. check ESP connnection"
-        #         )
-        #     return (None);
-        # print(f"{__FILE__()}:{__LINE__()} response: {response}")
         _line: str = raw_response.decode("utf-8", errors="ignore")
         self.line: str = _line.strip()
         if not self.line:

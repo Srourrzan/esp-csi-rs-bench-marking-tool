@@ -58,7 +58,7 @@ def start_latency_process(
         run_ts = conf.run_ts,
         baud_rate = conf.baud_rate,
         csv_dir = conf.csv_dir,
-        firmware_name = data.firmware_type,
+        firmware_name = data.firmware_type.name,
         raw_prefix=conf.csv_file_prefix,
         stats_prefix=conf.stats_file_prefix,
         queue_timeout=conf.queue_config.queue_timeout

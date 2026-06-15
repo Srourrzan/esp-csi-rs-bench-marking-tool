@@ -26,7 +26,7 @@ def main() -> int:
     if (conf.setup_logging() < -1):
         return (1);
     
-    sys_procs = SysProcess()
+    sys_procs = SysProcess(conf)
     data = Data(line_count = 0, header_parsed = False); 
     sys_procs.init_processes(conf, data)
     thread_stop = threading.Event()
@@ -49,9 +49,9 @@ def main() -> int:
                     info(f"{__FILE__()}:{__LINE__()} stopped after {conf.run_seconds} seconds")
                     break;
                 try:
-                    # Non-blocking fetch from local producer queue
-                    raw_response = raw_queue.get(timeout=conf.queue_config.queue_timeout)
-                    host_ts = time_ns()
+                    # 1. Unpack the packed response tuple from our I/O producer thread
+                    raw_tuple = raw_queue.get(timeout=conf.queue_config.queue_timeout)
+                    raw_response, host_us = raw_tuple  # host_us is now perfectly preserved!
                     data.decodeline(raw_response=raw_response)
                 except queue.Empty:
                     continue
@@ -67,28 +67,15 @@ def main() -> int:
                     print(f"{__FILE__()}:{__LINE__()} line={lower_line}")
                     # now we need to measure the avg heap usage
                     # We forward matching outputs down to our sub-prcess queue
-                    if sys_procs.enabled_processes["resources"] and sys_procs.res_que is not None:
-                        if "resmon:" in lower_line or "cpu:" in lower_line:
-                            try:
-                                sys_procs.res_que.put_nowait(data.line)
-                            except queue.Full:
-                                # drop if back-pressured; resource worker still computes summary
-                                pass
-                # else:
+                    if "resmon:" in lower_line or "cpu:" in lower_line:
+                        sys_procs.send_to_task("resources", data.line)
+                            
                     esp_ts = data.get_esp_ts()
                     if esp_ts is None:
                         continue
-                    if sys_procs.enabled_processes["latency"] and sys_procs.lat_que is not None:
-                        try:
-                            sys_procs.lat_que.put_nowait((host_ts, esp_ts))
-                        except queue.Full:
-                            pass
-                    if sys_procs.enabled_processes["throughput"] and sys_procs.tp_que is not None:
-                        try:
-                            # Send a low-overhead signal tag indicating a sample was processed
-                            sys_procs.tp_que.put_nowait("TICK")
-                        except queue.Full:
-                            pass
+                    # Deliver payloads seamlessly down active pipes safely
+                    sys_procs.send_to_task("latency", (host_us, esp_ts))
+                    sys_procs.send_to_task("throughput", "TICK")
                 
 
     except SerialTimeoutError as e:
@@ -119,31 +106,10 @@ def main() -> int:
         thread_stop.set()
         if sys_procs.producer_thread and sys_procs.producer_thread.is_alive():
             sys_procs.producer_thread.join(timeout=2.0)
-        # 2. Shutdown resource worker subprocess
-        if sys_procs.enabled_processes.get("resources") and sys_procs.res_proc is not None:
-            sys_procs.res_stop.set()
-            try:
-                sys_procs.res_que.put_nowait(None)
-            except Exception:
-                pass
-            sys_procs.res_proc.join(timeout=5)
-        # 3. Shutdown latency worker subprocess
-        if sys_procs.enabled_processes.get("latency") and sys_procs.lat_proc is not None:
-            sys_procs.lat_stop.set()
-            try:
-                sys_procs.lat_que.put_nowait(("SHUTDOWN", data.firmware_type.name))
-            except Exception:
-                pass
-            sys_procs.lat_proc.join(timeout=5)
-        # 4. Shutdown throughput worker subprocess cleanly
-        if sys_procs.enabled_processes.get("throughput") and sys_procs.tp_proc is not None:
-            sys_procs.tp_stop.set()
-            try:
-                fw_name = data.firmware_type.name if data.firmware_ded else "unknown"
-                sys_procs.tp_que.put_nowait(("SHUTDOWN", fw_name))
-            except Exception:
-                pass
-            sys_procs.tp_proc.join(timeout=5)
+        # 2. Extract our metadata string label safely
+        fw_name = data.firmware_type.name if data.firmware_ded else "unknown"
+        # 3. Dynamic dynamic multi-process cleanup execution
+        sys_procs.shutdown_all(fw_name)
         if data.line_count == 0:
             info("No CSI data collected")
         info(f"Runtime log saved to: logs/runtime_{conf.run_ts}.log")

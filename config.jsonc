@@ -5,7 +5,7 @@
 	"baud_rate": 115200,
 	"timeout": 10,
 	// this line should contain the tasks the user wish to perform
-	"task": "throughput",
+	"task": ["throughput", "latency"],
 	// this line should contain all the tasks that system can perform
 	"valid_tasks": ["latency", "resources", "throughput"],
 	"run_seconds": 60,
