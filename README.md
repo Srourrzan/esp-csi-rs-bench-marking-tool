@@ -2,7 +2,8 @@
 espressif csi repo `https://github.com/espressif/esp-csi`
 espressif modified code for resource measurements repo `https://github.com/Srourrzan/espressif_csi_firmware/tree/master`
 
-
+Hernandez forked and fixed code `https://github.com/Srourrzan/ESP32-CSI-Tool-Hernandez `
+Hernandez modified code for resource measurements repo `https://github.com/Srourrzan/ESP32-CSI-Tool-Hernandez/tree/usage_resources`
 
 Naive latency (delta_us) is the raw, uncorrected difference between:
 
@@ -19,17 +20,11 @@ csv_reader = csv.reader([line])  # Reuse this once per line
 fields = next(csv_reader)
 ```
 
-We want synchronization to measure latency in the following manner:
-The measure important here is Latency. As we discussed, we should measure the time from when CSI is captured until it is processed on a host. For that, probably looking at intervals between recieved messages and calculating a difference between the host clock and the ESP clock would be the most accurate. Additionally, the throughput is important, meaning how much data we can push through while maintaining minimum latency?
 
 #### The current latency measurement is:
 ```py
 delta_us = host_rx_epoch_us - esp_epoch_us
 ```
--> esp_epoch_us → ESP’s SNTP‑aligned timestamp.
--> host_rx_epoch_us → Host’s NTP‑aligned timestamp.
--> Since both reference UTC,
-Δ ≈ (serial transmission + waiting + residual offset).
 
 
 Next Steps for Deeper Analysis
@@ -44,8 +39,6 @@ Run your script with different ESP32 firmwares and compare the latency distribut
 
 
 ## HEAP and CPU Usage:
-
- I should fix the below summarization to be more accurate and actionable:
 
 * CPU% (Wi‑Fi task):
 This is the percent of total CPU time the Wi‑Fi driver task got during the last ~1 s window (your code uses uxTaskGetSystemState before/after a 1 s delay). CSI packets arrive in bursts and your callback prints a lot, so the Wi‑Fi task’s CPU usage spikes and dips. That’s normal. To compare firmwares, don’t use a single instant—sample for 30–60 s and report mean/median and a high percentile (e.g., p95). ESP‑IDF’s run‑time stats use an ESP‑TIMER counter (1 MHz), so the percentage is time‑based and stable across CPU freq changes. On dual‑core chips, the printed percent is relative to total time across all cores (so a task using one core fully can read ~50%). (docs.espressif.com docs.espressif.com)

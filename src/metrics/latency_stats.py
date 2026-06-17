@@ -9,12 +9,23 @@ class LatencyStats(BaseStats):
     deltas: list[int] = field(default_factory=list)
 
     def setup_headers(self) -> None:
-        self.raw.write_row(['host_time', 'esp_timestamp', 'delta_us'])
+        self.raw.write_row([
+            'host_time', 
+            'esp_timestamp', 
+            'delta_us'
+        ])
         self.stats.write_row([
-            "timestamp", "baud_rate", "firmware_type", 
-            "run_seconds", "total_samples", "median_us", 
-            "stdev_us", "min_us", "max_us", 
-            "p90_us", "p99_us"
+            "timestamp", 
+            "baud_rate", 
+            "firmware_type", 
+            "run_seconds", 
+            "total_samples", 
+            "median_us", 
+            "stdev_us", 
+            "min_us", 
+            "max_us", 
+            "p90_us", 
+            "p99_us"
         ])
 
     def record_delta(self, host_ts: int, esp_ts: int) -> None:

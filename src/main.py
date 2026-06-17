@@ -66,7 +66,7 @@ def main() -> int:
                     if not start:
                         start = time()
                     # lower_line = data.line.lower()
-                    # print(f"{__FILE__()}:{__LINE__()} line={data.line}")
+                    print(f"{__FILE__()}:{__LINE__()} line={data.line}")
                     # 1. Ask the data engine what kind of line we are dealing with
                     line_kind = data.get_line_kind()
                     # 2. Extract hardware time parameters (returns None safely for resource lines)

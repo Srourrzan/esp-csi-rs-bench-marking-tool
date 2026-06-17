@@ -12,8 +12,15 @@ class ThroughputStats(BaseStats):
     def setup_headers(self) -> None:
         self.raw.write_row(['host_timestamp_us', 'samples_per_second'])
         self.stats.write_row([
-            "timestamp", "baud_rate", "firmware_type", "run_seconds", "total_runtime_sec",
-            "mean_pps", "median_pps", "min_pps", "max_pps"
+            "timestamp", 
+            "baud_rate", 
+            "firmware_type", 
+            "run_seconds", 
+            "total_runtime_sec",
+            "mean_pps", 
+            "median_pps", 
+            "min_pps", 
+            "max_pps"
         ])
 
     def record_window(self, host_ts_us: int, sample_count: int) -> None:

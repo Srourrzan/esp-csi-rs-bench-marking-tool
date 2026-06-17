@@ -16,9 +16,13 @@ class ResourcesStats(BaseStats):
 
     def setup_headers(self) -> None:
         self.raw.write_row([
-            "ts_us", "kind", "free_B",
-            "min_free_since_boot_B", "largest_block_B",
-            "stack_headroom_B", "cpu_percent"
+            "ts_us", 
+            "kind", 
+            "free_B",
+            "min_free_since_boot_B", 
+            "largest_block_B",
+            "stack_headroom_B", 
+            "cpu_percent"
         ])
         self.stats.write_row([
             "timestamp", 

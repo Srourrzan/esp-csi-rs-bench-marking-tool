@@ -61,9 +61,8 @@ class Data:
                 ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])') # add the regex to the config file
                 clean_line = ansi_escape.sub('', self.line).strip()
                 clean_line = clean_line.split(" ")
-                if 'csi' in clean_line:
+                if 'csi' or 'passive' in clean_line:
                     self.firmware_type = conf.firmwares[clean_line[-1]]
-                # exit(10);
                 self.firmware_ded = True;
         except KeyError:
             self.firmware_type.name = "unknown"
@@ -102,13 +101,8 @@ class Data:
                 else:
                     idx = self.col_index[self.firmware_type.timestamp_label]
                     esp_ts = int(fields[idx].strip())
-                # print(f"{__FILE__()}:{__LINE__()} esp_ts: {esp_ts}")
-                
             except (ValueError, IndexError):
                 pass
-        # if esp_ts is None:
-            # print(f"{__FILE__()}:{__LINE__()} esp_ts: {esp_ts}")
-            # print(f"line: {self.line}")
         return (esp_ts);
 
     def get_line_kind(self) -> str:

@@ -5,7 +5,7 @@
 	"baud_rate": 115200,
 	"timeout": 10,
 	// this line should contain the tasks the user wish to perform
-	"task": "latency",
+	"task": "resources",
 	// this line should contain all the tasks that system can perform
 	"valid_tasks": ["latency", "resources", "throughput"],
 	"run_seconds": 60,
@@ -35,7 +35,8 @@
 			"data_header": true,
 			"delimater": ","
 		},
-		"CSI_DATA,PASSIVE": //fix
+		//I (469) cpu_start: Project name:     passive
+		"passive": //fix
 		{
 			"name": "Hernandez",
 			"timestamp_label": "local_timestamp",
