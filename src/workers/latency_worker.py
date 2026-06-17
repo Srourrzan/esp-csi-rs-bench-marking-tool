@@ -1,13 +1,11 @@
-import queue
-import signal
+from os import path
+from typing import Any
 from dataclasses import dataclass
-from multiprocessing import Process, Queue, Event
 
 from parsing import Data
 from config import Config
-from debug import __FILE__, __LINE__
+from workers.base_worker import BaseWorker
 from metrics.latency_stats import LatencyStats
-
 
 @dataclass
 class LatencyWorkerConf:
@@ -18,59 +16,39 @@ class LatencyWorkerConf:
     raw_prefix: str
     stats_prefix: str
     queue_timeout: float
+    run_seconds: int = 0
 
+class LatencyWorker(BaseWorker[LatencyWorkerConf, LatencyStats]):
+    ConfigClass = LatencyWorkerConf  # Reference for the base class builder helper
 
-def __latency_worker_main(que: Queue, stop: Event, wdict: dict) -> None:
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    w = LatencyWorkerConf(**wdict)
-    l_stats = LatencyStats()
-    
-    l_stats.setup_files(w.csv_dir, w.run_ts, w.raw_prefix, w.stats_prefix)
-    l_stats.setup_headers()
-    try:
-        print(f"{__FILE__()}:{__LINE__()}")
-        while True:
-            try:
-                msg = que.get(timeout=w.queue_timeout)
-            except queue.Empty:
-                if stop.is_set():
-                    break
-                continue
-            if msg is None:
-                break
-            if isinstance(msg, tuple) and len(msg) == 2:
-                print(f"{__FILE__()}:{__LINE__()} msg: {msg}")
-                if msg[0] == "SHUTDOWN":
-                    w.firmware_name = msg[1]
-                    break
-                else:
-                    host_ts, esp_ts = msg
-                    l_stats.record_delta(host_ts, esp_ts)
-    finally:
-        l_stats.finalize(w.run_ts, w.baud_rate, w.firmware_name)
+    def __init__(self):
+        super().__init__(name="latency_worker")
 
-    
-def start_latency_process(
-    conf: Config,
-    data: Data
-) -> tuple[Queue, Event, Process]:
-    wdict = dict(
-        run_ts = conf.run_ts,
-        baud_rate = conf.baud_rate,
-        csv_dir = conf.csv_dir,
-        firmware_name = data.firmware_type.name,
-        raw_prefix=conf.csv_file_prefix,
-        stats_prefix=conf.stats_file_prefix,
-        queue_timeout=conf.queue_config.queue_timeout
-    )
-    que = Queue(maxsize=conf.queue_config.max_queue_size)
-    stop = Event()
-    proc = Process(
-        target=__latency_worker_main,
-        args=(que, stop, wdict),
-        name="latency_worker",
-        daemon=True
-    )
-    proc.start()
+    def create_config(self, conf: Config, data: Data) -> LatencyWorkerConf:
+        target_dir = path.join(conf.csv_dir, data.firmware_type.name, "latency")
+        return LatencyWorkerConf(
+            run_ts=conf.run_ts,
+            baud_rate=conf.baud_rate,
+            csv_dir=target_dir,
+            firmware_name=data.firmware_type.name,
+            raw_prefix=conf.csv_file_prefix,
+            run_seconds=conf.run_seconds,
+            stats_prefix=conf.stats_file_prefix,
+            queue_timeout=conf.queue_config.queue_timeout
+        )
 
-    return (que, stop, proc);
+    def create_stats_tracker(self, w_conf: LatencyWorkerConf) -> LatencyStats:
+        l_stats = LatencyStats()
+        l_stats.setup_files(w_conf.csv_dir, w_conf.run_ts, w_conf.raw_prefix, w_conf.stats_prefix)
+        l_stats.setup_headers()
+        return l_stats
+
+    def process_message(self, msg: Any, stats: LatencyStats, w_conf: LatencyWorkerConf, ts_us: int) -> bool:
+        if isinstance(msg, tuple) and len(msg) == 2:
+            host_ts, esp_ts = msg
+            stats.record_delta(host_ts, esp_ts)
+        return True
+
+# Export a clean factory function hook matching your importlib registry conventions
+def start_latency_process(conf: Config, data: Data):
+    return LatencyWorker().start_process(conf, data)

@@ -220,7 +220,7 @@ def load_config() -> (int, Dict|None):
     try:
         with open("config.jsonc", "r", encoding="utf-8") as file:
             config: Dict = json5.load(file)
-    except json5.JSONDecodeError as e:
+    except ValueError as e:
         print(f"{__FILE__()}:{__LINE__()}: Failed to decode JSON: {e}",
               file=stderr)
         return (-1, None);

@@ -21,11 +21,18 @@ class ResourcesStats(BaseStats):
             "stack_headroom_B", "cpu_percent"
         ])
         self.stats.write_row([
-            "timestamp", "baud_rate", "firmware_type",
-            "total_cpu_samples", "cpu_mean_pct",
-            "cpu_median_pct", "cpu_p95_pct",
-            "heap_min_free_start_B", "heap_min_free_end_B",
-            "heap_min_free_drop_B", "largest_block_min_B",
+            "timestamp", 
+            "baud_rate", 
+            "firmware_type", 
+            "run_seconds",
+            "total_cpu_samples", 
+            "cpu_mean_pct",
+            "cpu_median_pct", 
+            "cpu_p95_pct",
+            "heap_min_free_start_B", 
+            "heap_min_free_end_B",
+            "heap_min_free_drop_B", 
+            "largest_block_min_B",
             "stack_headroom_min_B"
         ])
 
@@ -49,7 +56,13 @@ class ResourcesStats(BaseStats):
         self.cpu_samples.append(cpu_pct)
         self.raw.write_row([ts_us, "cpu", "", "", "", "", f"{cpu_pct:.3f}"])
 
-    def finalize(self, run_ts: str, baud_rate: int, firmware_name: str) -> None:
+    def finalize(
+        self, 
+        run_ts: str, 
+        baud_rate: int, 
+        firmware_name: str, 
+        run_seconds: int
+    ) -> None:
         if self.cpu_samples:
             m = mean(self.cpu_samples)
             med = median(self.cpu_samples)
@@ -65,6 +78,7 @@ class ResourcesStats(BaseStats):
             run_ts,
             baud_rate,
             firmware_name,
+            run_seconds,
             len(self.cpu_samples),
             f"{m:.2f}",
             f"{med:.2f}",

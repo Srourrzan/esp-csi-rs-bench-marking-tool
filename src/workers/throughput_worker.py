@@ -1,11 +1,11 @@
-import time
-import queue
-import signal
+from os import path
+from typing import Any
+from time import time_ns
 from dataclasses import dataclass
-from multiprocessing import Process, Queue, Event
 
 from parsing import Data
 from config import Config
+from workers.base_worker import BaseWorker
 from metrics.throughput_stats import ThroughputStats
 
 @dataclass
@@ -14,74 +14,47 @@ class ThroughputWorkerConf:
     baud_rate: int
     csv_dir: str
     firmware_name: str
+    run_seconds: int = 0
     raw_prefix: str = "throughput_data_"
     stats_prefix: str = "throughput_stats_"
     queue_timeout: float = 0.1
 
-def __throughput_worker_main(que: Queue, stop: Event, wdict: dict) -> None:
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    w = ThroughputWorkerConf(**wdict)
-    t_stats = ThroughputStats()
-    
-    t_stats.setup_files(w.csv_dir, w.run_ts, w.raw_prefix, w.stats_prefix)
-    t_stats.setup_headers()
+class ThroughputWorker(BaseWorker[ThroughputWorkerConf, ThroughputStats]):
+    ConfigClass = ThroughputWorkerConf
 
-    current_window_count = 0
-    # Establish time benchmarks in nanoseconds for microsecond tracking accuracy
-    last_window_flush = time.time_ns()
+    def __init__(self):
+        super().__init__(name="throughput_worker")
+        self.current_window_count = 0
+        self.last_window_flush = time_ns()
 
-    try:
-        while True:
-            try:
-                # Use a small timeout so we can dynamically check time windows even during quiet periods
-                msg = que.get(timeout=w.queue_timeout)
-            except queue.Empty:
-                msg = None
+    def create_config(self, conf: Config, data: Data) -> ThroughputWorkerConf:
+        target_dir = path.join(conf.csv_dir, data.firmware_type.name, "throughput")
+        return ThroughputWorkerConf(
+            run_ts=conf.run_ts,
+            baud_rate=conf.baud_rate,
+            csv_dir=target_dir,
+            firmware_name=data.firmware_type.name,
+            run_seconds=conf.run_seconds,
+            queue_timeout=conf.queue_config.queue_timeout
+        )
 
-            now_ns = time.time_ns()
+    def create_stats_tracker(self, w_conf: ThroughputWorkerConf) -> ThroughputStats:
+        t_stats = ThroughputStats()
+        t_stats.setup_files(w_conf.csv_dir, w_conf.run_ts, w_conf.raw_prefix, w_conf.stats_prefix)
+        t_stats.setup_headers()
+        return t_stats
 
-            # Handle explicit pipeline closure tracking signals
-            if msg is not None:
-                if msg == "TICK":
-                    current_window_count += 1
-                elif isinstance(msg, tuple) and msg[0] == "SHUTDOWN":
-                    w.firmware_name = msg[1]
-                    # Flush any remaining counts left over before breaking
-                    # if current_window_count > 0:
-                    t_stats.record_window(now_ns // 1000, current_window_count)
-                    break
+    def process_message(self, msg: Any, stats: ThroughputStats, w_conf: ThroughputWorkerConf, ts_us: int) -> bool:
+        if msg == "TICK":
+            self.current_window_count += 1
+        return True
 
-            # If 1 second (1,000,000,000 nanoseconds) has passed, write out our current metrics count
-            if now_ns - last_window_flush >= 1_000_000_000:
-                t_stats.record_window(now_ns // 1000, current_window_count)
-                current_window_count = 0
-                last_window_flush = now_ns
-                
-            if msg is None and stop.is_set():
-                if current_window_count > 0:
-                    t_stats.record_window(now_ns // 1000, current_window_count)
-                break
-    finally:
-        t_stats.finalize(w.run_ts, w.baud_rate, w.firmware_name)
+    def process_periodic_window(self, stats: ThroughputStats, w_conf: ThroughputWorkerConf, now_ns: int) -> None:
+        # Check if 1 second (1,000,000,000 nanoseconds) has passed to dump data
+        if now_ns - self.last_window_flush >= 1_000_000_000:
+            stats.record_window(now_ns // 1_000, self.current_window_count)
+            self.current_window_count = 0
+            self.last_window_flush = now_ns
 
-def start_throughput_process(
-        conf: Config,
-        data: Data
-    ) -> tuple[Queue, Event, Process]:
-    wdict = dict(
-        run_ts=conf.run_ts,
-        baud_rate=conf.baud_rate,
-        csv_dir=conf.csv_dir,
-        firmware_name=data.firmware_type.name,
-        queue_timeout=conf.queue_config.queue_timeout
-    )
-    que = Queue(maxsize=conf.queue_config.max_queue_size)
-    stop = Event()
-    proc = Process(
-        target=__throughput_worker_main,
-        args=(que, stop, wdict),
-        name="throughput_worker",
-        daemon=True
-    )
-    proc.start()
-    return que, stop, proc
+def start_throughput_process(conf: Config, data: Data):
+    return ThroughputWorker().start_process(conf, data)

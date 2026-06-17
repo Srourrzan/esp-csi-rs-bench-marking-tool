@@ -34,7 +34,7 @@ class SysProcess:
             try:
                 # 1. Dynamically construct the file path name string on the fly
                 # e.g., "latency" -> module name "workers.latency_worker"
-                module_name = f"{task_name}_worker"
+                module_name = f"workers.{task_name}_worker"
                 # 2. Programmatically import the module file from your filesystem
                 worker_module = importlib.import_module(module_name)
                 # 3. Look up the factory function dynamically inside that imported module file

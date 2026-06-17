@@ -12,7 +12,7 @@ class ThroughputStats(BaseStats):
     def setup_headers(self) -> None:
         self.raw.write_row(['host_timestamp_us', 'samples_per_second'])
         self.stats.write_row([
-            "timestamp", "baud_rate", "firmware_type", "total_runtime_sec",
+            "timestamp", "baud_rate", "firmware_type", "run_seconds", "total_runtime_sec",
             "mean_pps", "median_pps", "min_pps", "max_pps"
         ])
 
@@ -21,7 +21,13 @@ class ThroughputStats(BaseStats):
         self.window_samples.append(sample_count)
         self.raw.write_row([host_ts_us, sample_count])
 
-    def finalize(self, run_ts: str, baud_rate: int, firmware_name: str) -> None:
+    def finalize(
+            self, 
+            run_ts: str, 
+            baud_rate: int, 
+            firmware_name: str, 
+            run_seconds: int
+        ) -> None:
         if not self.window_samples:
             self.close_files()
             return
@@ -31,7 +37,7 @@ class ThroughputStats(BaseStats):
         min_pps = min(self.window_samples)
         max_pps = max(self.window_samples)
         self.stats.write_row([
-            run_ts, baud_rate, firmware_name, len(self.window_samples),
+            run_ts, baud_rate, firmware_name,run_seconds ,len(self.window_samples),
             f"{mean_pps:.2f}", f"{med_pps:.2f}", min_pps, max_pps
         ])
         self.close_files()

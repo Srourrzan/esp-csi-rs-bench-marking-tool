@@ -11,8 +11,10 @@ class LatencyStats(BaseStats):
     def setup_headers(self) -> None:
         self.raw.write_row(['host_time', 'esp_timestamp', 'delta_us'])
         self.stats.write_row([
-            "timestamp", "baud_rate", "firmware_type", "total_samples",
-            "median_us", "stdev_us", "min_us", "max_us", "p90_us", "p99_us"
+            "timestamp", "baud_rate", "firmware_type", 
+            "run_seconds", "total_samples", "median_us", 
+            "stdev_us", "min_us", "max_us", 
+            "p90_us", "p99_us"
         ])
 
     def record_delta(self, host_ts: int, esp_ts: int) -> None:
@@ -20,7 +22,13 @@ class LatencyStats(BaseStats):
         self.deltas.append(delta_us)
         self.raw.write_row([host_ts, esp_ts, delta_us])
 
-    def finalize(self, run_ts: str, baud_rate: int, firmware_name: str) -> None:
+    def finalize(
+            self, 
+            run_ts: str, 
+            baud_rate: int, 
+            firmware_name: str, 
+            run_seconds: int
+        ) -> None:
         if not self.deltas:
             self.close_files()
             return
@@ -39,7 +47,7 @@ class LatencyStats(BaseStats):
             q100 = quantiles(self.deltas, n=100)
             p99_val = int(q100[98]) if len(q100) > 98 else "N/A"
         self.stats.write_row([
-            run_ts, baud_rate, firmware_name, len(self.deltas),
+            run_ts, baud_rate, firmware_name, run_seconds, len(self.deltas),
             f"{med_val:.0f}", f"{std_val:.0f}", 
             min_val, max_val, p90_val, p99_val
         ])

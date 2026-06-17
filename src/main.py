@@ -28,7 +28,7 @@ def main() -> int:
     
     sys_procs = SysProcess(conf)
     data = Data(line_count = 0, header_parsed = False); 
-    sys_procs.init_processes(conf, data)
+    # sys_procs.init_processes(conf, data)
     thread_stop = threading.Event()
 
     try:
@@ -59,12 +59,14 @@ def main() -> int:
                     continue
                 if not data.header_parsed:
                     if data.parsed_tracking_rules(conf):
+                        info(f"Firmware detected as: {data.firmware_type.name}. Initializing metrics processes...")
+                        sys_procs.init_processes(conf, data)
                         continue
                 else:
                     if not start:
                         start = time()
                     # lower_line = data.line.lower()
-                    print(f"{__FILE__()}:{__LINE__()} line={data.line}")
+                    # print(f"{__FILE__()}:{__LINE__()} line={data.line}")
                     # 1. Ask the data engine what kind of line we are dealing with
                     line_kind = data.get_line_kind()
                     # 2. Extract hardware time parameters (returns None safely for resource lines)
