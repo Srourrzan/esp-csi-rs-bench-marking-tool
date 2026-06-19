@@ -98,6 +98,53 @@ You can install this project directly into your Conda environment. This will aut
    pip install -e .
    ```
 
+
+## Flash Size
+- espressif firmware:
+```
+Total sizes:
+Used static DRAM:   28880 bytes ( 151856 remain, 16.0% used)
+      .data size:   12944 bytes
+      .bss  size:   15936 bytes
+Used static IRAM:   85790 bytes (  45282 remain, 65.5% used)
+      .text size:   84763 bytes
+   .vectors size:    1027 bytes
+Used Flash size :  551303 bytes
+      .text     :  459811 bytes
+      .rodata   :   91236 bytes
+Total image size:  650037 bytes (.bin may be padded larger)
+```
+
+- Hernandez firmware:
+```
+Total sizes:
+Used static DRAM:   33932 bytes ( 146804 remain, 18.8% used)
+      .data size:   13444 bytes
+      .bss  size:   20488 bytes
+Used static IRAM:   86242 bytes (  44830 remain, 65.8% used)
+      .text size:   85215 bytes
+   .vectors size:    1027 bytes
+Used Flash size :  769711 bytes
+      .text     :  610183 bytes
+      .rodata   :  159272 bytes
+Total image size:  869397 bytes (.bin may be padded larger)
+```
+
+- Wi-ESP firmware:
+```
+Total sizes:
+Used static DRAM:   28788 bytes ( 151948 remain, 15.9% used)
+      .data size:   13284 bytes
+      .bss  size:   15504 bytes
+Used static IRAM:   86326 bytes (  44746 remain, 65.9% used)
+      .text size:   85299 bytes
+   .vectors size:    1027 bytes
+Used Flash size :  553119 bytes
+      .text     :  462907 bytes
+      .rodata   :   89956 bytes
+Total image size:  652729 bytes (.bin may be padded larger)
+```
+
 ### Running the Tool
 
 Installing the project via `pyproject.toml` automatically creates an entry point script.
