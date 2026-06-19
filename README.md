@@ -1,29 +1,57 @@
+## Installation & Usage
 
-The following repositories are relevant to this project:
-espressif csi repo `https://github.com/espressif/esp-csi`
-espressif modified code for resource measurements repo `https://github.com/Srourrzan/espressif_csi_firmware/tree/master`
+This project uses a standard `pyproject.toml` file to manage its configuration and dependencies. 
 
-Hernandez forked and fixed code `https://github.com/Srourrzan/ESP32-CSI-Tool-Hernandez `
-Hernandez modified code for resource measurements repo `https://github.com/Srourrzan/ESP32-CSI-Tool-Hernandez/tree/usage_resources`
+### Setting up the Environment
 
-Wi-ESP forked and fixed code `https://github.com/Srourrzan/Wi-ESP_benchmark`
+You can install this project directly into your Conda environment. This will automatically install dependencies like `pyserial` and `json5` using the `pip` provided by Conda, keeping them correctly isolated to your environment.
 
-monitoring utils repo: `https://github.com/Srourrzan/esp32-monitoring-utils`
+1. Activate your Conda virtual environment:
+   ```bash
+   conda activate <your-environment-name>
+   ```
+
+2. Install the project dependencies:
+   ```bash
+   pip install .
+   ```
+
+### Running the Tool
+
+You can run the tool directly using Python:
+
+```bash
+python src/main.py
+```
+
+*(Note: Your environment must be active for this command to be available.)*
+
+
+## The Architecture Strategy
+
+Instead of executing everything inline within a blocking loop, we will decouple the architecture:
+
+- Producer (Thread): A lightweight background thread whose exclusive job is to pull lines out of serial.readline() as fast as possible and append them into a fast, in-memory queue.Queue.
+
+- Main Engine / Coordinator (Main Thread): Pulls raw strings out of the local queue, feeds them through the regex cleaning and firmware matching logic, and passes off the specialized lines to downstream components.
+
+- Resources Worker (Separate Process): It continues running on its own CPU core, picking up performance-monitoring string matches forwarded from the engine.
+
+### Throughput strategy 
+
+Because processing throughput on a single-line basis is highly inefficient, the correct pattern is Time-Windowed Aggregation:
+
+- The Main Thread (main.py) flags every time a valid CSI data line is successfully parsed. It will push a timestamped notification token down to a dedicated Throughput Process.
+
+- The Throughput Worker keeps a rolling counter. Every time 1 second passes, it flushes that count to a raw data log (e.g., 450 samples/sec) and calculates rolling performance stats.
+
+
+## Measurements and Analysis
 
 Naive latency (delta_us) is the raw, uncorrected difference between:
 
 * The host’s timestamp when it receives the CSI data (host_rx_epoch_us).
 * The ESP’s timestamp when it captured the CSI data (esp_epoch_us).
-
-
-CSV Parsing Robustness
-
-* Problem: Using reader([line]) repeatedly is error-prone. Use a single csv.reader instance.
-* Fix:
-```py
-csv_reader = csv.reader([line])  # Reuse this once per line
-fields = next(csv_reader)
-```
 
 
 #### The current latency measurement is:
@@ -40,7 +68,7 @@ To check for drift or sudden jumps.
 
 2. 
 Compare Across Firmwares
-Run your script with different ESP32 firmwares and compare the latency distributions.
+Run script with different ESP32 firmwares and compare the latency distributions.
 
 
 ## HEAP and CPU Usage:
@@ -59,44 +87,6 @@ How to get “accurate” (comparable) numbers
 * CPU: Collect many 1‑s samples over 30–60 s of steady traffic; report mean, median, and p95. Avoid using a single instant. (docs.espressif.com)
 * RAM: Use min_free_since_boot and largest_block after a long run. Track whether min_free_since_boot decreases over hours; if it does, you have a leak. (docs.espressif.com)
 * Stack: Let the system run through its worst‑case traffic; then log the headroom once it stabilizes. Smaller = closer to overflow. (docs.espressif.com)
-
-
-## The Architecture Strategy
-
-Instead of executing everything inline within a blocking loop, we will decouple the architecture:
-
-- Producer (Thread): A lightweight background thread whose exclusive job is to pull lines out of serial.readline() as fast as possible and append them into a fast, in-memory queue.Queue.
-
-- Main Engine / Coordinator (Main Thread): Pulls raw strings out of the local queue, feeds them through the regex cleaning and firmware matching logic, and passes off the specialized lines to downstream components.
-
-- Resources Worker (Separate Process): It continues running on its own CPU core, picking up performance-monitoring string matches forwarded from the engine.
-
-## Throughput strategy 
-
-Because processing throughput on a single-line basis is highly inefficient, the correct pattern is Time-Windowed Aggregation:
-
-- The Main Thread (main.py) flags every time a valid CSI data line is successfully parsed. It will push a timestamped notification token down to a dedicated Throughput Process.
-
-- The Throughput Worker keeps a rolling counter. Every time 1 second passes, it flushes that count to a raw data log (e.g., 450 samples/sec) and calculates rolling performance stats.
-
-
-## Installation & Usage
-
-This project uses a standard `pyproject.toml` file to manage its configuration and dependencies. 
-
-### Setting up the Environment
-
-You can install this project directly into your Conda environment. This will automatically install dependencies like `pyserial` and `json5` using the `pip` provided by Conda, keeping them correctly isolated to your environment.
-
-1. Activate your Conda virtual environment:
-   ```bash
-   conda activate <your-environment-name>
-   ```
-
-2. Install the project in "editable mode" (`-e`). This means any changes you make to the source code will take effect immediately without needing to reinstall:
-   ```bash
-   pip install -e .
-   ```
 
 
 ## Flash Size
@@ -145,13 +135,26 @@ Used Flash size :  553119 bytes
 Total image size:  652729 bytes (.bin may be padded larger)
 ```
 
-### Running the Tool
 
-Installing the project via `pyproject.toml` automatically creates an entry point script.
-Instead of having to run `python src/main.py`, you can now run the tool from anywhere using:
+## Additional Notes
 
-```bash
-esp-csi-bench
+CSV Parsing Robustness
+
+* Problem: Using reader([line]) repeatedly is error-prone. Use a single csv.reader instance.
+* Fix:
+```py
+csv_reader = csv.reader([line])  # Reuse this once per line
+fields = next(csv_reader)
 ```
 
-*(Note: Your environment must be active for this command to be available.)*
+
+The following repositories are relevant to this project:
+espressif csi repo `https://github.com/espressif/esp-csi`
+espressif modified code for resource measurements repo `https://github.com/Srourrzan/espressif_csi_firmware/tree/master`
+
+Hernandez forked and fixed code `https://github.com/Srourrzan/ESP32-CSI-Tool-Hernandez `
+Hernandez modified code for resource measurements repo `https://github.com/Srourrzan/ESP32-CSI-Tool-Hernandez/tree/usage_resources`
+
+Wi-ESP forked and fixed code `https://github.com/Srourrzan/Wi-ESP_benchmark`
+
+monitoring utils repo: `https://github.com/Srourrzan/esp32-monitoring-utils`

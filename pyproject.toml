@@ -16,10 +16,7 @@ dependencies = [
     "json5",
 ]
 
-[project.scripts]
-# Automatically create a terminal command names 'esp-csi-bench'
-# It will run the `main()` function inside `src/main.py`
-esp-csi-bench = "src.main:main"
+
 
 [tool.setuptools.packages.find]
 where = ["."]
