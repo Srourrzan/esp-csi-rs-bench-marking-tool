@@ -1,9 +1,14 @@
 
+The following repositories are relevant to this project:
 espressif csi repo `https://github.com/espressif/esp-csi`
 espressif modified code for resource measurements repo `https://github.com/Srourrzan/espressif_csi_firmware/tree/master`
 
 Hernandez forked and fixed code `https://github.com/Srourrzan/ESP32-CSI-Tool-Hernandez `
 Hernandez modified code for resource measurements repo `https://github.com/Srourrzan/ESP32-CSI-Tool-Hernandez/tree/usage_resources`
+
+Wi-ESP forked and fixed code `https://github.com/Srourrzan/Wi-ESP_benchmark`
+
+monitoring utils repo: `https://github.com/Srourrzan/esp32-monitoring-utils`
 
 Naive latency (delta_us) is the raw, uncorrected difference between:
 

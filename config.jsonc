@@ -1,11 +1,13 @@
 {
+	// move any hardcoded value inside the system to here
 	// for Hernandez use 115200,
 	// for espressif use 921600
 	// for Wi-ESP use 115200
-	"baud_rate": 115200,
+	"baud_rate": 921600,
 	"timeout": 10,
 	// this line should contain the tasks the user wish to perform
-	"task": "resources",
+	// remove brackets in case of a single task
+	"task": "throughput",
 	// this line should contain all the tasks that system can perform
 	"valid_tasks": ["latency", "resources", "throughput"],
 	"run_seconds": 60,
@@ -23,12 +25,12 @@
 	},
 	"firmware_types":
 	{
-		// I will change the logic of finding the type of the csi firmware,
-		// I will not use the header as an indicator, 
-		// instead I will use the monitoring starting lines, like:
+		// use the monitoring starting lines, like:
 		// I (390) cpu_start: Project name:     csi
 		// I (395) cpu_start: App version:      d1ec0b2
-		"CSI_DATA": //fix
+
+		//I (300) cpu_start: Project name:     csi_recv_router
+		"csi_recv_router":
 		{
 			"name": "espressif",
 			"timestamp_label": "local_timestamp",
@@ -36,13 +38,14 @@
 			"delimater": ","
 		},
 		//I (469) cpu_start: Project name:     passive
-		"passive": //fix
+		"passive":
 		{
 			"name": "Hernandez",
 			"timestamp_label": "local_timestamp",
 			"data_header": true,
 			"delimater": ","
 		},
+		// I (390) cpu_start: Project name:     csi
 		"csi":
 		{
 			"name": "Wi-ESP",
