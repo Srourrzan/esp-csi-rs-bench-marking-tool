@@ -1,0 +1,2 @@
+timestamp,baud_rate,firmware_type,run_seconds,total_runtime_sec,mean_pps,median_pps,min_pps,max_pps
+20260617_183851,115200,Hernandez,60,85,0.05,0.00,0,1

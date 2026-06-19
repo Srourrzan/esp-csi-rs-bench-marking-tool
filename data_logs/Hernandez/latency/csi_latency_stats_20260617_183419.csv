@@ -1,0 +1,2 @@
+timestamp,baud_rate,firmware_type,run_seconds,total_samples,median_us,stdev_us,min_us,max_us,p90_us,p99_us
+20260617_183419,115200,Hernandez,60,8,1781710460855092,4886,1781710460846632,1781710460860094,N/A,N/A

@@ -1,0 +1,2 @@
+timestamp,baud_rate,firmware_type,run_seconds,total_cpu_samples,cpu_mean_pct,cpu_median_pct,cpu_p95_pct,heap_min_free_start_B,heap_min_free_end_B,heap_min_free_drop_B,largest_block_min_B,stack_headroom_min_B
+20260617_180103,115200,Hernandez,60,0,0.00,0.00,0.00,,,,,

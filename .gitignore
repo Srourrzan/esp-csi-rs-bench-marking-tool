@@ -7,7 +7,7 @@ __pycache__/
 
 #program output files
 logs/
-data_logs/
+# data_logs/
 
 # esp-csi-bench command
 esp_csi_benchmarking.egg-info

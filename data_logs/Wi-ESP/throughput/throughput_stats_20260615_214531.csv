@@ -1,0 +1,2 @@
+timestamp,baud_rate,firmware_type,total_runtime_sec,mean_pps,median_pps,min_pps,max_pps
+20260615_214531,115200,Wi-ESP,60,0.07,0.00,0,1

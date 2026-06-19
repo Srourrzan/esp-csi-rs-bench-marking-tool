@@ -1,0 +1,2 @@
+timestamp,baud_rate,firmware_type,run_seconds,total_samples,median_us,stdev_us,min_us,max_us,p90_us,p99_us
+20260617_121341,115200,Wi-ESP,60,22,1781687622962788,282960,1781687621650580,1781687623044234,1781687623009016,N/A

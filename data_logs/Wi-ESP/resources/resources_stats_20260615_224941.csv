@@ -1,0 +1,2 @@
+timestamp,baud_rate,firmware_type,total_cpu_samples,cpu_mean_pct,cpu_median_pct,cpu_p95_pct,heap_min_free_start_B,heap_min_free_end_B,heap_min_free_drop_B,largest_block_min_B,stack_headroom_min_B
+20260615_224941,115200,Wi-ESP,9,0.62,0.40,3.60,222448,216200,6248,110592,4508
